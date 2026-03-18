@@ -8,6 +8,8 @@ function esc(x: string) {
 const COLS: { key: CategoryId; label: string }[] = [
   { key: 'SV', label: 'SV' },
   { key: 'HLD', label: 'HLD' },
+  { key: 'SVH', label: 'SV+H' },
+  { key: 'NSVH', label: 'NSVH' },
   { key: 'K', label: 'K' },
   { key: 'W', label: 'W' },
   { key: 'IP', label: 'IP' },

@@ -16,6 +16,8 @@ export type CategoryId =
   | 'K'
   | 'SV'
   | 'HLD'
+  | 'SVH'
+  | 'NSVH'
   | 'W'
   | 'IP'
   | 'ERA'

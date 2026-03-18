@@ -19,6 +19,8 @@ export const DEFAULT_RP_CONFIG: RpConfig = {
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'SV', label: 'SV', weight: 1, direction: 'higher', enabled: true },
   { id: 'HLD', label: 'HLD', weight: 1, direction: 'higher', enabled: true },
+  { id: 'SVH', label: 'SV+H', weight: 1, direction: 'higher', enabled: false },
+  { id: 'NSVH', label: 'NSVH', weight: 1, direction: 'higher', enabled: false },
   { id: 'K', label: 'K', weight: 0.8, direction: 'higher', enabled: true },
   { id: 'ERA', label: 'ERA', weight: 1, direction: 'lower', enabled: true },
   { id: 'WHIP', label: 'WHIP', weight: 1, direction: 'lower', enabled: true },
@@ -58,10 +60,16 @@ function getStat(split: MlbPitchingSplit, key: string): unknown {
 export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
   return splits.map((s) => {
     const teamName = s.team?.name ?? ''
+    const sv = num(getStat(s, 'saves'))
+    const hld = num(getStat(s, 'holds'))
+    const bs = num(getStat(s, 'blownSaves'))
+    const svh = (sv ?? 0) + (hld ?? 0)
     const stats: PlayerRow['stats'] = {
       K: num(getStat(s, 'strikeOuts')),
-      SV: num(getStat(s, 'saves')),
-      HLD: num(getStat(s, 'holds')),
+      SV: sv,
+      HLD: hld,
+      SVH: Number.isFinite(svh) ? svh : null,
+      NSVH: Number.isFinite(svh) ? svh - (bs ?? 0) : null,
       W: num(getStat(s, 'wins')),
       IP: inningsToFloat(getStat(s, 'inningsPitched')),
       ERA: num(getStat(s, 'era')),
@@ -131,11 +139,25 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
   }
 
   const rpRows: PlayerRpRow[] = included.map((r) => {
-    const z: PlayerRpRow['z'] = { K: null, SV: null, HLD: null, W: null, IP: null, ERA: null, WHIP: null, K9: null, BB9: null }
+    const z: PlayerRpRow['z'] = {
+      K: null,
+      SV: null,
+      HLD: null,
+      SVH: null,
+      NSVH: null,
+      W: null,
+      IP: null,
+      ERA: null,
+      WHIP: null,
+      K9: null,
+      BB9: null,
+    }
     const contrib: PlayerRpRow['contrib'] = {
       K: null,
       SV: null,
       HLD: null,
+      SVH: null,
+      NSVH: null,
       W: null,
       IP: null,
       ERA: null,

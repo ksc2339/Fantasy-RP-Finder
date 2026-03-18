@@ -77,7 +77,7 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
 
             <div class={styles.sectionTitle}>Raw stats (selected fields)</div>
             <div class={styles.pills}>
-              {(['SV', 'HLD', 'K', 'W', 'IP', 'ERA', 'WHIP', 'K9', 'BB9'] as CategoryId[]).map((id) => (
+              {(['SV', 'HLD', 'SVH', 'NSVH', 'K', 'W', 'IP', 'ERA', 'WHIP', 'K9', 'BB9'] as CategoryId[]).map((id) => (
                 <div class={styles.pill} key={id}>
                   <div class={styles.pillK}>{id}</div>
                   <div class={styles.pillV}>{fmtStat(id, row.stats[id])}</div>
