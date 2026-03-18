@@ -1,0 +1,142 @@
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--bg) 94%, transparent);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.subTitle {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-h);
+  margin: 4px 0 8px;
+}
+
+.grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  color: color-mix(in oklab, var(--text) 85%, transparent);
+}
+
+.input {
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 90%, transparent);
+  color: var(--text-h);
+  padding: 0 10px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: color-mix(in oklab, var(--accent) 70%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-bg) 90%, transparent);
+}
+
+.hr {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+
+.cats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.catRow {
+  display: grid;
+  grid-template-columns: 1fr 86px;
+  align-items: center;
+  gap: 10px;
+}
+
+.catCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  user-select: none;
+}
+
+.catLabel {
+  color: var(--text-h);
+}
+
+.catDir {
+  margin-left: 6px;
+  color: color-mix(in oklab, var(--text) 80%, transparent);
+  font-size: 12px;
+}
+
+.weight {
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--bg) 90%, transparent);
+  color: var(--text-h);
+  padding: 0 10px;
+}
+
+.weight:disabled {
+  opacity: 0.55;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.badge {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-h);
+}
+
+.badge[data-status='loading'] {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+
+.badge[data-status='error'] {
+  border-color: color-mix(in oklab, #ef4444 60%, var(--border));
+}
+
+.updated {
+  font-size: 12px;
+  color: color-mix(in oklab, var(--text) 85%, transparent);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+

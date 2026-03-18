@@ -1,0 +1,15 @@
+# Root
+*.log
+*.local
+
+# Frontend (Vite)
+web/node_modules/
+web/dist/
+web/dist-ssr/
+web/.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

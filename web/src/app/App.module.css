@@ -1,0 +1,100 @@
+.page {
+  min-height: 100svh;
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  color: var(--text-h);
+}
+
+.subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: color-mix(in oklab, var(--text) 80%, transparent);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ghostButton {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ghostButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  padding: 16px 20px 20px;
+}
+
+.panel {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+}
+
+.content {
+  min-width: 0;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  padding: 14px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-h);
+  margin-bottom: 8px;
+}
+
+.cardBody {
+  font-size: 13px;
+}
+
+.footer {
+  padding: 12px 20px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: color-mix(in oklab, var(--text) 80%, transparent);
+}
+
+@media (max-width: 1024px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    position: static;
+  }
+}
+
