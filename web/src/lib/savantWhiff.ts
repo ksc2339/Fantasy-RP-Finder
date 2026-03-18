@@ -85,6 +85,21 @@ function parseWhiffPctFromCsv(csv: string, playerId: number): number | null {
   return null
 }
 
+async function tryFetchFromLocalData(season: number, playerId: number, signal?: AbortSignal) {
+  try {
+    const res = await fetch(`./data/whiff_${season}.json`, { signal })
+    if (!res.ok) return null
+    const json = (await res.json()) as any
+    const map = json?.whiffPctByPlayerId as Record<string, unknown> | undefined
+    if (!map) return null
+    const v = map[String(playerId)]
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN
+    return Number.isFinite(n) ? n : null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchWhiffPct(opts: {
   season: number
   playerId: number
@@ -102,6 +117,13 @@ export async function fetchWhiffPct(opts: {
     } catch {
       // ignore corrupted cache
     }
+  }
+
+  const local = await tryFetchFromLocalData(opts.season, opts.playerId, opts.signal)
+  if (local != null) {
+    const out: WhiffResult & { cachedAt: number } = { ok: true, whiffPct: local, fetchedAt, cachedAt: Date.now() }
+    localStorage.setItem(k, JSON.stringify(out))
+    return out
   }
 
   const url = buildUrl(opts.season)
