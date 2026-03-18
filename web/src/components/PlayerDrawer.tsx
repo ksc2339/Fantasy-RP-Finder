@@ -1,5 +1,7 @@
 import type { CategoryId, PlayerRpRow, RpMeta } from '../lib/types'
+import { useEffect, useState } from 'preact/hooks'
 import { mlbHeadshotUrl } from '../lib/mlbImages'
+import { fetchWhiffPct } from '../lib/savantWhiff'
 import styles from './PlayerDrawer.module.css'
 
 type Props = {
@@ -24,6 +26,33 @@ function fmtStat(id: CategoryId, n: number | null) {
 export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
   const open = !!row
   const enabled = rpMeta.cats.filter((c) => c.enabled && c.weight !== 0)
+  const [whiff, setWhiff] = useState<number | null>(null)
+  const [whiffStatus, setWhiffStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
+
+  useEffect(() => {
+    if (!row) {
+      setWhiff(null)
+      setWhiffStatus('idle')
+      return
+    }
+    const ac = new AbortController()
+    setWhiffStatus('loading')
+    fetchWhiffPct({ season: rpMeta.cfg.season, playerId: row.playerId, signal: ac.signal })
+      .then((res) => {
+        if (!res.ok) {
+          setWhiff(null)
+          setWhiffStatus('ready')
+          return
+        }
+        setWhiff(res.whiffPct)
+        setWhiffStatus('ready')
+      })
+      .catch(() => {
+        setWhiff(null)
+        setWhiffStatus('ready')
+      })
+    return () => ac.abort()
+  }, [row?.playerId, rpMeta.cfg.season])
 
   return (
     <div class={styles.backdrop} data-open={open ? 'true' : 'false'} onClick={onClose}>
@@ -90,6 +119,12 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
 
             <div class={styles.sectionTitle}>Raw stats (selected fields)</div>
             <div class={styles.pills}>
+              <div class={styles.pill}>
+                <div class={styles.pillK}>Whiff%</div>
+                <div class={styles.pillV}>
+                  {whiffStatus === 'loading' ? '…' : whiff == null ? '—' : `${whiff.toFixed(1)}%`}
+                </div>
+              </div>
               {(['SV', 'HLD', 'SVH', 'NSVH', 'K', 'W', 'IP', 'ERA', 'WHIP', 'K9', 'BB9'] as CategoryId[]).map((id) => (
                 <div class={styles.pill} key={id}>
                   <div class={styles.pillK}>{id}</div>
