@@ -113,7 +113,9 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
             ) : view.length === 0 ? (
               <tr>
                 <td class={styles.td} colSpan={4 + enabledCats.length}>
-                  No results.
+                  {rows.length === 0 && meta.excludedCount > 0
+                    ? 'No relievers matched your filters. Try lowering Min IP / Min Games or increasing Max Starts.'
+                    : 'No results.'}
                 </td>
               </tr>
             ) : (

@@ -6,10 +6,31 @@
   padding: 14px;
 }
 
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .title {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-h);
+}
+
+.reset {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reset:hover {
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
 }
 
 .subTitle {

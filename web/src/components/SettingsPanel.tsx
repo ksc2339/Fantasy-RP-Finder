@@ -1,4 +1,5 @@
 import type { CategoryConfig, RpConfig } from '../lib/types'
+import { DEFAULT_RP_CONFIG, DEFAULT_CATEGORIES } from '../lib/rp'
 import styles from './SettingsPanel.module.css'
 
 type Props = {
@@ -20,7 +21,19 @@ export function SettingsPanel({
 }: Props) {
   return (
     <div class={styles.card}>
-      <div class={styles.title}>Settings</div>
+      <div class={styles.headerRow}>
+        <div class={styles.title}>Settings</div>
+        <button
+          class={styles.reset}
+          type="button"
+          onClick={() => {
+            setCfg(DEFAULT_RP_CONFIG)
+            setCategories(DEFAULT_CATEGORIES)
+          }}
+        >
+          Reset
+        </button>
+      </div>
 
       <div class={styles.grid}>
         <label class={styles.field}>

@@ -9,10 +9,11 @@ import type {
 } from './types'
 
 export const DEFAULT_RP_CONFIG: RpConfig = {
-  season: new Date().getFullYear(),
-  minIP: 20,
+  // Default to last completed season to avoid empty early-season results.
+  season: new Date().getFullYear() - 1,
+  minIP: 10,
   maxStarts: 1,
-  minGames: 10,
+  minGames: 5,
 }
 
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
