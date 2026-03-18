@@ -1,4 +1,5 @@
 import type { CategoryId, PlayerRpRow, RpMeta } from '../lib/types'
+import { mlbHeadshotUrl } from '../lib/mlbImages'
 import styles from './PlayerDrawer.module.css'
 
 type Props = {
@@ -30,7 +31,19 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
         {!row ? null : (
           <>
             <div class={styles.header}>
-              <div>
+              <div class={styles.headerLeft}>
+                <img
+                  class={styles.headshot}
+                  src={mlbHeadshotUrl(row.playerId, 120)}
+                  srcSet={`${mlbHeadshotUrl(row.playerId, 120)} 1x, ${mlbHeadshotUrl(row.playerId, 360)} 2x`}
+                  width={60}
+                  height={60}
+                  loading="lazy"
+                  alt={`${row.name} headshot`}
+                  onError={(e) => {
+                    ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                  }}
+                />
                 <div class={styles.name}>{row.name}</div>
                 <div class={styles.team}>{row.team || '—'}</div>
               </div>
