@@ -4,6 +4,9 @@
   background: color-mix(in oklab, var(--bg) 94%, transparent);
   box-shadow: var(--shadow);
   padding: 14px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .headerRow {
@@ -43,14 +46,17 @@
 .grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
+  min-width: 0;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .label {
@@ -60,6 +66,10 @@
 
 .input {
   height: 34px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: color-mix(in oklab, var(--bg) 90%, transparent);
@@ -87,9 +97,10 @@
 
 .catRow {
   display: grid;
-  grid-template-columns: 1fr 86px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 86px);
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .catCheck {
@@ -112,6 +123,10 @@
 
 .weight {
   height: 32px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: color-mix(in oklab, var(--bg) 90%, transparent);

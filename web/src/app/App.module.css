@@ -48,7 +48,7 @@
 
 .main {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: minmax(0, 360px) 1fr;
   gap: 16px;
   padding: 16px 20px 20px;
 }
@@ -57,6 +57,8 @@
   position: sticky;
   top: 12px;
   align-self: start;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .content {
