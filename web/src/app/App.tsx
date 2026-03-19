@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { fetchSeasonPitchingStats } from '../lib/mlbApi'
+import { getSavantPitcherMetricsMap, type SavantPitcherMetrics } from '../lib/savantPitcherData'
+import { getFangraphsXfipMap, type FangraphsPitcherFields } from '../lib/fangraphsXfipData'
 import type { CategoryConfig, PlayerRpRow, RpConfig } from '../lib/types'
 import { DEFAULT_CATEGORIES, DEFAULT_RP_CONFIG, buildRows, computeRp } from '../lib/rp'
 import { SettingsPanel } from '../components/SettingsPanel'
@@ -28,6 +30,8 @@ export function App() {
   const [cats, setCats] = useState<CategoryConfig[]>(() => DEFAULT_CATEGORIES)
   const [state, setState] = useState<LoadState>({ status: 'idle' })
   const [raw, setRaw] = useState<Awaited<ReturnType<typeof fetchSeasonPitchingStats>> | null>(null)
+  const [savantByPlayerId, setSavantByPlayerId] = useState<Record<string, SavantPitcherMetrics> | null>(null)
+  const [fangraphsByPlayerId, setFangraphsByPlayerId] = useState<Record<string, FangraphsPitcherFields> | null>(null)
   const [selected, setSelected] = useState<PlayerRpRow | null>(null)
 
   useEffect(() => {
@@ -38,10 +42,33 @@ export function App() {
     let cancelled = false
     async function run() {
       setState({ status: 'loading' })
+      setSavantByPlayerId(null)
+      setFangraphsByPlayerId(null)
       try {
         const res = await fetchSeasonPitchingStats({ season: cfg.season })
         if (cancelled) return
         setRaw(res)
+
+        // Savant stats are baked at deploy; we load the season-wide map once.
+        try {
+          const mapRes = await getSavantPitcherMetricsMap(cfg.season)
+          if (cancelled) return
+          setSavantByPlayerId(mapRes.byPlayerId)
+        } catch {
+          if (cancelled) return
+          setSavantByPlayerId(null)
+        }
+
+        // FanGraphs xFIP is scraped (sparse) at deploy time.
+        try {
+          const xfipRes = await getFangraphsXfipMap(cfg.season)
+          if (cancelled) return
+          setFangraphsByPlayerId(xfipRes.byPlayerId)
+        } catch {
+          if (cancelled) return
+          setFangraphsByPlayerId(null)
+        }
+
         setState({ status: 'ready' })
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Unknown error'
@@ -56,8 +83,34 @@ export function App() {
 
   const rows = useMemo(() => {
     if (!raw) return []
-    return buildRows(raw.splits)
-  }, [raw])
+    const base = buildRows(raw.splits)
+    if (!savantByPlayerId && !fangraphsByPlayerId) return base
+
+    // Inject Savant values so they can be used as z-score categories.
+    return base.map((r) => {
+      const m = savantByPlayerId ? savantByPlayerId[String(r.playerId)] : undefined
+      const f = fangraphsByPlayerId ? fangraphsByPlayerId[String(r.playerId)] : undefined
+      if (!m && (f == null || f == undefined)) return r
+
+      const nextStats = { ...r.stats }
+      if (m) {
+        nextStats.WHIFF = m.whiffPct
+        nextStats.XERA = m.xera
+      }
+      if (f) {
+        nextStats.XFIP = f.xFIP
+        nextStats.FIP = f.FIP
+        nextStats.WPA = f.WPA
+        nextStats.LOBP = f.LOBP
+      } else {
+        nextStats.XFIP = m?.xfip ?? null
+      }
+      return {
+        ...r,
+        stats: nextStats,
+      }
+    })
+  }, [raw, savantByPlayerId, fangraphsByPlayerId])
 
   const rp = useMemo(() => {
     return computeRp(rows, cfg, cats)

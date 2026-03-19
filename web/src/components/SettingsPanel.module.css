@@ -43,6 +43,48 @@
   margin: 4px 0 8px;
 }
 
+.presetRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 10px;
+  min-width: 0;
+}
+
+.presetLabel {
+  font-size: 12px;
+  color: color-mix(in oklab, var(--text) 85%, transparent);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.presetBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.presetBtn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.presetBtn[data-active='true'] {
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+  background: color-mix(in oklab, var(--accent-bg) 22%, transparent);
+}
+
+.presetBtn:hover {
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+
 .grid {
   margin-top: 12px;
   display: grid;
@@ -168,6 +210,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cacheClear {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-h);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cacheClear:hover {
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+
+.cacheHint {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: color-mix(in oklab, var(--text) 75%, transparent);
 }
 
 @media (max-width: 520px) {

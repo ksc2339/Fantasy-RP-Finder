@@ -116,6 +116,32 @@
   color: color-mix(in oklab, var(--text) 85%, transparent);
 }
 
+.externalLinks {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.extButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  text-decoration: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.extButton:hover {
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+  background: color-mix(in oklab, var(--accent-bg) 25%, transparent);
+}
+
 .sectionTitle {
   margin-top: 14px;
   font-size: 13px;

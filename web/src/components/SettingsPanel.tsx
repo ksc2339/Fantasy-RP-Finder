@@ -1,5 +1,6 @@
 import type { CategoryConfig, RpConfig } from '../lib/types'
-import { DEFAULT_RP_CONFIG, DEFAULT_CATEGORIES } from '../lib/rp'
+import { CATEGORY_PRESETS, DEFAULT_CATEGORIES, DEFAULT_RP_CONFIG, applyCategoryPreset } from '../lib/rp'
+import { clearDataCaches } from '../lib/savantPitcherData'
 import styles from './SettingsPanel.module.css'
 
 type Props = {
@@ -87,6 +88,28 @@ export function SettingsPanel({
 
       <div class={styles.hr} />
 
+      <div class={styles.presetRow}>
+        <div class={styles.presetLabel}>Preset</div>
+        <div class={styles.presetBtns}>
+          {CATEGORY_PRESETS.map((p) => {
+            const enabledIds = new Set(categories.filter((c) => c.enabled && c.weight !== 0).map((c) => c.id))
+            const isActive =
+              p.enabledIds.length === enabledIds.size && p.enabledIds.every((id) => enabledIds.has(id))
+            return (
+              <button
+                type="button"
+                class={styles.presetBtn}
+                data-active={isActive ? 'true' : 'false'}
+                key={p.id}
+                onClick={() => setCategories(applyCategoryPreset(categories, new Set(p.enabledIds)))}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <div class={styles.subTitle}>Categories (z-score)</div>
       <div class={styles.cats}>
         {categories.map((c) => (
@@ -131,6 +154,19 @@ export function SettingsPanel({
         <div class={styles.updated}>
           {lastUpdated ? `Fetched: ${new Date(lastUpdated).toLocaleString()}` : 'Not fetched yet'}
         </div>
+      </div>
+      <button
+        type="button"
+        class={styles.cacheClear}
+        onClick={() => {
+          clearDataCaches()
+          window.location.reload()
+        }}
+      >
+        Clear browser cache &amp; reload
+      </button>
+      <div class={styles.cacheHint}>
+        Use after a new deploy if Savant stats (Whiff%, xERA, xFIP) look stale. Data is baked at build (~800 pitchers/season).
       </div>
     </div>
   )

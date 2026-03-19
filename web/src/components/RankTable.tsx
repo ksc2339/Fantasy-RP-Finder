@@ -17,6 +17,20 @@ function fmt(n: number | null, digits = 2) {
   return n.toFixed(digits)
 }
 
+function renderCategoryValue(id: CategoryId, n: number | null) {
+  if (n == null || !Number.isFinite(n)) return '—'
+  if (id === 'ERA' || id === 'WHIP' || id === 'XERA' || id === 'XFIP' || id === 'FIP') return n.toFixed(2)
+  if (id === 'WHIFF') return `${n.toFixed(1)}%`
+  if (id === 'IP') return n.toFixed(1)
+  if (id === 'WPA') return n.toFixed(3)
+  if (id === 'LOBP') {
+    const pct = n > 1.5 ? n : n * 100
+    return `${pct.toFixed(1)}%`
+  }
+  if (id === 'K9' || id === 'BB9') return n.toFixed(2)
+  return String(Math.round(n))
+}
+
 export function RankTable({ rows, meta, status, onPick }: Props) {
   const [q, setQ] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('rp')
@@ -129,7 +143,7 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
                   <td class={styles.tdNum}>{fmt(r.rp, 3)}</td>
                   {enabledCats.map((c) => (
                     <td class={styles.tdNum} key={c.id}>
-                      {fmt(r.stats[c.id], c.id === 'ERA' || c.id === 'WHIP' ? 2 : 0)}
+                      {renderCategoryValue(c.id, r.stats[c.id])}
                     </td>
                   ))}
                 </tr>

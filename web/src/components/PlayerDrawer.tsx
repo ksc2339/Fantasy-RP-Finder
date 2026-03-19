@@ -1,7 +1,8 @@
 import type { CategoryId, PlayerRpRow, RpMeta } from '../lib/types'
 import { useEffect, useState } from 'preact/hooks'
 import { mlbHeadshotUrl } from '../lib/mlbImages'
-import { fetchWhiffPct } from '../lib/savantWhiff'
+import { getSavantPitcherMetrics } from '../lib/savantPitcherData'
+import { fetchPlayerPitchHandAndAge } from '../lib/mlbApi'
 import styles from './PlayerDrawer.module.css'
 
 type Props = {
@@ -17,42 +18,86 @@ function fmt(n: number | null, digits = 3) {
 
 function fmtStat(id: CategoryId, n: number | null) {
   if (n == null || !Number.isFinite(n)) return '—'
-  if (id === 'ERA' || id === 'WHIP') return n.toFixed(2)
+  if (id === 'ERA' || id === 'WHIP' || id === 'XERA' || id === 'XFIP' || id === 'FIP') return n.toFixed(2)
   if (id === 'IP') return n.toFixed(1)
+  if (id === 'WHIFF') return n.toFixed(1)
+  if (id === 'LOBP') {
+    // FanGraphs LOB% may arrive as either 0.308 or 30.8 depending on the endpoint.
+    const pct = n > 1.5 ? n : n * 100
+    return `${pct.toFixed(1)}%`
+  }
+  if (id === 'WPA') return n.toFixed(3)
   if (id === 'K9' || id === 'BB9') return n.toFixed(2)
   return String(Math.round(n))
+}
+
+function fmtPitchHand(code: string | null) {
+  if (!code) return '—'
+  if (code === 'L') return 'L (좌)'
+  if (code === 'R') return 'R (우)'
+  return code
 }
 
 export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
   const open = !!row
   const enabled = rpMeta.cats.filter((c) => c.enabled && c.weight !== 0)
-  const [whiff, setWhiff] = useState<number | null>(null)
-  const [whiffStatus, setWhiffStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
+  const filmRoomQuery = encodeURIComponent(row?.name ?? '').replace(/%20/g, '+')
+  const [savant, setSavant] = useState<{
+    whiffPct: number | null
+    xera: number | null
+    xfip: number | null
+  } | null>(null)
+  const [savantStatus, setSavantStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
+
+  const [person, setPerson] = useState<{ age: number | null; pitchHand: string | null } | null>(null)
+  const [personStatus, setPersonStatus] = useState<'idle' | 'loading' | 'ready'>('idle')
 
   useEffect(() => {
     if (!row) {
-      setWhiff(null)
-      setWhiffStatus('idle')
+      setSavant(null)
+      setSavantStatus('idle')
       return
     }
     const ac = new AbortController()
-    setWhiffStatus('loading')
-    fetchWhiffPct({ season: rpMeta.cfg.season, playerId: row.playerId, signal: ac.signal })
+    setSavantStatus('loading')
+    getSavantPitcherMetrics(rpMeta.cfg.season, row.playerId, ac.signal)
       .then((res) => {
-        if (!res.ok) {
-          setWhiff(null)
-          setWhiffStatus('ready')
-          return
-        }
-        setWhiff(res.whiffPct)
-        setWhiffStatus('ready')
+        setSavant(res.metrics)
+        setSavantStatus('ready')
       })
       .catch(() => {
-        setWhiff(null)
-        setWhiffStatus('ready')
+        setSavant(null)
+        setSavantStatus('ready')
       })
     return () => ac.abort()
   }, [row?.playerId, rpMeta.cfg.season])
+
+  useEffect(() => {
+    if (!row) {
+      setPerson(null)
+      setPersonStatus('idle')
+      return
+    }
+    const ac = new AbortController()
+    setPersonStatus('loading')
+    fetchPlayerPitchHandAndAge({ playerId: row.playerId, signal: ac.signal })
+      .then((res) => {
+        setPerson({ age: res.age ?? row.age ?? null, pitchHand: res.pitchHand ?? row.pitchHand ?? null })
+        setPersonStatus('ready')
+      })
+      .catch(() => {
+        setPerson({ age: row.age ?? null, pitchHand: row.pitchHand ?? null })
+        setPersonStatus('ready')
+      })
+    return () => ac.abort()
+  }, [row?.playerId])
+
+  const ageToShow = person?.age ?? row?.age ?? null
+  const pitchHandToShow = person?.pitchHand ?? row?.pitchHand ?? null
+
+  const ageText = personStatus === 'loading' && ageToShow == null ? '…' : ageToShow == null ? '—' : String(ageToShow)
+  const throwsText =
+    personStatus === 'loading' && pitchHandToShow == null ? '…' : fmtPitchHand(pitchHandToShow)
 
   return (
     <div class={styles.backdrop} data-open={open ? 'true' : 'false'} onClick={onClose}>
@@ -88,7 +133,27 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
               </div>
               <div class={styles.filters}>
                 Season: {rpMeta.cfg.season} • Min IP: {rpMeta.cfg.minIP} • Max Starts: {rpMeta.cfg.maxStarts}
+                <span> • Age: {ageText} • Throws: {throwsText}</span>
               </div>
+            </div>
+
+            <div class={styles.externalLinks}>
+              <a
+                class={styles.extButton}
+                href={`https://baseballsavant.mlb.com/savant-player/${row.playerId}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Baseball Savant
+              </a>
+              <a
+                class={styles.extButton}
+                href={`https://www.mlb.com/video/?q=${filmRoomQuery}&qt=FREETEXT`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                MLB Film Room
+              </a>
             </div>
 
             <div class={styles.sectionTitle}>Category breakdown</div>
@@ -117,13 +182,41 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
               </table>
             </div>
 
-            <div class={styles.sectionTitle}>Raw stats (selected fields)</div>
+            <div class={styles.sectionTitle}>Savant (baked at deploy)</div>
             <div class={styles.pills}>
               <div class={styles.pill}>
                 <div class={styles.pillK}>Whiff%</div>
                 <div class={styles.pillV}>
-                  {whiffStatus === 'loading' ? '…' : whiff == null ? '—' : `${whiff.toFixed(1)}%`}
+                  {savantStatus === 'loading'
+                    ? '…'
+                    : savant?.whiffPct == null
+                      ? '—'
+                      : `${savant.whiffPct.toFixed(1)}%`}
                 </div>
+              </div>
+              <div class={styles.pill}>
+                <div class={styles.pillK}>xERA</div>
+                <div class={styles.pillV}>
+                  {savantStatus === 'loading' ? '…' : fmt(savant?.xera ?? null, 2)}
+                </div>
+              </div>
+              <div class={styles.pill}>
+                <div class={styles.pillK}>xFIP</div>
+                <div class={styles.pillV}>
+                  {savantStatus === 'loading' ? '…' : fmtStat('XFIP', row.stats.XFIP)}
+                </div>
+              </div>
+              <div class={styles.pill}>
+                <div class={styles.pillK}>FIP</div>
+                <div class={styles.pillV}>{fmtStat('FIP', row.stats.FIP)}</div>
+              </div>
+              <div class={styles.pill}>
+                <div class={styles.pillK}>WPA</div>
+                <div class={styles.pillV}>{fmtStat('WPA', row.stats.WPA)}</div>
+              </div>
+              <div class={styles.pill}>
+                <div class={styles.pillK}>LOB%</div>
+                <div class={styles.pillV}>{fmtStat('LOBP', row.stats.LOBP)}</div>
               </div>
               {(['SV', 'HLD', 'SVH', 'NSVH', 'K', 'W', 'IP', 'ERA', 'WHIP', 'K9', 'BB9'] as CategoryId[]).map((id) => (
                 <div class={styles.pill} key={id}>

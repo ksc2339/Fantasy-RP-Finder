@@ -24,11 +24,34 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'K', label: 'K', weight: 0.8, direction: 'higher', enabled: true },
   { id: 'ERA', label: 'ERA', weight: 1, direction: 'lower', enabled: true },
   { id: 'WHIP', label: 'WHIP', weight: 1, direction: 'lower', enabled: true },
+  { id: 'WHIFF', label: 'Whiff%', weight: 0.6, direction: 'higher', enabled: false },
+  { id: 'XERA', label: 'xERA', weight: 0.6, direction: 'lower', enabled: false },
+  { id: 'XFIP', label: 'xFIP', weight: 0.6, direction: 'lower', enabled: false },
+  { id: 'FIP', label: 'FIP', weight: 0.6, direction: 'lower', enabled: false },
+  { id: 'WPA', label: 'WPA', weight: 0.3, direction: 'higher', enabled: false },
+  { id: 'LOBP', label: 'LOB%', weight: 0.4, direction: 'higher', enabled: false },
   { id: 'W', label: 'W', weight: 0.25, direction: 'higher', enabled: false },
   { id: 'IP', label: 'IP', weight: 0.25, direction: 'higher', enabled: false },
   { id: 'K9', label: 'K/9', weight: 0.35, direction: 'higher', enabled: false },
   { id: 'BB9', label: 'BB/9', weight: 0.2, direction: 'lower', enabled: false },
 ]
+
+export const CATEGORY_PRESETS: { id: 'classic' | 'savant'; label: string; enabledIds: CategoryId[] }[] = [
+  {
+    id: 'classic',
+    label: 'Classic (SV+HLD+K+ERA+WHIP)',
+    enabledIds: ['SV', 'HLD', 'K', 'ERA', 'WHIP'],
+  },
+  {
+    id: 'savant',
+    label: 'Savant (Classic + Whiff/xERA/xFIP + WPA/FIP/LOB%)',
+    enabledIds: ['SV', 'HLD', 'K', 'ERA', 'WHIP', 'WHIFF', 'XERA', 'XFIP', 'FIP', 'WPA', 'LOBP'],
+  },
+]
+
+export function applyCategoryPreset(categories: CategoryConfig[], enabledIds: Set<CategoryId>): CategoryConfig[] {
+  return categories.map((c) => ({ ...c, enabled: enabledIds.has(c.id) }))
+}
 
 function num(x: unknown): number | null {
   if (x == null) return null
@@ -60,6 +83,7 @@ function getStat(split: MlbPitchingSplit, key: string): unknown {
 export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
   return splits.map((s) => {
     const teamName = s.team?.name ?? ''
+    const age = num(getStat(s, 'age'))
     const sv = num(getStat(s, 'saves'))
     const hld = num(getStat(s, 'holds'))
     const bs = num(getStat(s, 'blownSaves'))
@@ -74,6 +98,12 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
       IP: inningsToFloat(getStat(s, 'inningsPitched')),
       ERA: num(getStat(s, 'era')),
       WHIP: num(getStat(s, 'whip')),
+      WHIFF: null,
+      XERA: null,
+      XFIP: null,
+      FIP: null,
+      WPA: null,
+      LOBP: null,
       K9: num(getStat(s, 'strikeoutsPer9Inn')),
       BB9: num(getStat(s, 'walksPer9Inn')),
     }
@@ -81,6 +111,8 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
       playerId: s.player.id,
       name: s.player.fullName,
       team: teamName,
+      age,
+      pitchHand: null,
       stats,
       raw: s,
     }
@@ -149,6 +181,12 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       IP: null,
       ERA: null,
       WHIP: null,
+      WHIFF: null,
+      XERA: null,
+      XFIP: null,
+      FIP: null,
+      WPA: null,
+      LOBP: null,
       K9: null,
       BB9: null,
     }
@@ -162,6 +200,12 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       IP: null,
       ERA: null,
       WHIP: null,
+      WHIFF: null,
+      XERA: null,
+      XFIP: null,
+      FIP: null,
+      WPA: null,
+      LOBP: null,
       K9: null,
       BB9: null,
     }

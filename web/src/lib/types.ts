@@ -22,6 +22,12 @@ export type CategoryId =
   | 'IP'
   | 'ERA'
   | 'WHIP'
+  | 'WHIFF'
+  | 'XERA'
+  | 'XFIP'
+  | 'FIP'
+  | 'WPA'
+  | 'LOBP'
   | 'K9'
   | 'BB9'
 
@@ -44,6 +50,8 @@ export type PlayerRow = {
   playerId: number
   name: string
   team: string
+  age: number | null
+  pitchHand: string | null
   stats: Record<CategoryId, number | null>
   raw: MlbPitchingSplit
 }

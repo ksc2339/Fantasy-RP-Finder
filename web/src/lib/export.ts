@@ -15,6 +15,12 @@ const COLS: { key: CategoryId; label: string }[] = [
   { key: 'IP', label: 'IP' },
   { key: 'ERA', label: 'ERA' },
   { key: 'WHIP', label: 'WHIP' },
+  { key: 'WHIFF', label: 'Whiff%' },
+  { key: 'XERA', label: 'xERA' },
+  { key: 'XFIP', label: 'xFIP' },
+  { key: 'FIP', label: 'FIP' },
+  { key: 'WPA', label: 'WPA' },
+  { key: 'LOBP', label: 'LOB%' },
   { key: 'K9', label: 'K/9' },
   { key: 'BB9', label: 'BB/9' },
 ]

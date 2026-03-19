@@ -46,8 +46,8 @@ npm run preview
 
 ## 브라우저 캐시(하루 1회)
 
-- **MLB 시즌 스탯**: 같은 시즌 데이터는 **24시간** 동안 `localStorage`에 두고, 그 안에는 **다시 받아와 저장하지 않음**(만료 후에만 갱신).
-- **Whiff%**: 시즌당 **하루에 한 번만** 전체 맵을 받아 `localStorage`에 저장하고, 선수마다 따로 저장하지 않음. (Pages 빌드에 포함된 `data/whiff_*.json` 우선)
+- **MLB 시즌 스탯**: 같은 시즌 데이터는 `localStorage`에 두되, **America/Los_Angeles 날짜(서행일) 기준으로 매일 00:00**이 넘어가면 갱신합니다.
+- **Savant (Whiff%, xERA, xFIP)**: CI 빌드 시 `data/savant_pitcher_{year}.json`에 넣고, 클라이언트는 시즌당 하루 1회(역시 `America/Los_Angeles` 날짜 기준)만 맵을 `localStorage`에 캐시. Savant 리더보드 한도로 **시즌당 약 800명**만 포함 → 출장 적은 릴리버는 `—`일 수 있음. 배포 후 갱신이 안 보이면 Settings의 **Clear browser cache & reload**.
 - **설정(시즌·필터·가중치)**: 바꿀 때마다 저장(용량 매우 작음).
 
 ## 레포 용량 정책(100MB 미만)
