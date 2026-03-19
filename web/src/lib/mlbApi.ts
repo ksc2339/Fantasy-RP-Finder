@@ -6,7 +6,8 @@ type FetchSeasonPitchingStatsArgs = {
 }
 
 const LS_PREFIX = 'bullpen-rp:mlbStats:v1'
-const ONE_HOUR_MS = 60 * 60 * 1000
+/** At most one MLB season fetch + localStorage write per 24h per season. */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 function buildUrl(season: number) {
   const params = new URLSearchParams({
@@ -35,7 +36,7 @@ export async function fetchSeasonPitchingStats({
   if (cached) {
     try {
       const parsed = JSON.parse(cached) as SeasonPitchingResponse & { cachedAt?: number }
-      if (typeof parsed?.cachedAt === 'number' && Date.now() - parsed.cachedAt < ONE_HOUR_MS) {
+      if (typeof parsed?.cachedAt === 'number' && Date.now() - parsed.cachedAt < CACHE_TTL_MS) {
         return { fetchedAt: parsed.fetchedAt, splits: parsed.splits }
       }
     } catch {

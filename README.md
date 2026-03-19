@@ -44,6 +44,12 @@ npm run preview
 - **Data source**: MLB Stats API (클라이언트에서 직접 호출)
 - Yahoo Fantasy / FanGraphs는 인증/제약 이슈로 MVP에 포함하지 않았습니다(추후 옵션 확장 가능).
 
+## 브라우저 캐시(하루 1회)
+
+- **MLB 시즌 스탯**: 같은 시즌 데이터는 **24시간** 동안 `localStorage`에 두고, 그 안에는 **다시 받아와 저장하지 않음**(만료 후에만 갱신).
+- **Whiff%**: 시즌당 **하루에 한 번만** 전체 맵을 받아 `localStorage`에 저장하고, 선수마다 따로 저장하지 않음. (Pages 빌드에 포함된 `data/whiff_*.json` 우선)
+- **설정(시즌·필터·가중치)**: 바꿀 때마다 저장(용량 매우 작음).
+
 ## 레포 용량 정책(100MB 미만)
 
 - `web/node_modules`, `web/dist`는 `.gitignore`로 제외되어 커밋되지 않습니다.
