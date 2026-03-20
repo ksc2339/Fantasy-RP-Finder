@@ -28,6 +28,8 @@ export type CategoryId =
   | 'FIP'
   | 'WPA'
   | 'LOBP'
+  | 'BABIP'
+  | 'HRFB'
   | 'K9'
   | 'BB9'
 

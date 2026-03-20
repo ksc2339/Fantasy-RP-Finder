@@ -163,10 +163,10 @@ export function SettingsPanel({
           window.location.reload()
         }}
       >
-        Clear browser cache &amp; reload
+        스탯 다시 불러오기
       </button>
       <div class={styles.cacheHint}>
-        Use after a new deploy if Savant stats (Whiff%, xERA, xFIP) look stale. Data is baked at build (~800 pitchers/season).
+        Savant·FanGraphs 등 브라우저에 캐시된 스탯이 오래됐을 때 사용하세요. 캐시를 비운 뒤 페이지가 새로고침됩니다.
       </div>
     </div>
   )

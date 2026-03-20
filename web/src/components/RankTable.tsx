@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'preact/hooks'
+import { useEffect, useMemo, useState } from 'preact/hooks'
 import type { CategoryId, PlayerRpRow, RpMeta } from '../lib/types'
 import styles from './RankTable.module.css'
 
@@ -20,10 +20,11 @@ function fmt(n: number | null, digits = 2) {
 function renderCategoryValue(id: CategoryId, n: number | null) {
   if (n == null || !Number.isFinite(n)) return '—'
   if (id === 'ERA' || id === 'WHIP' || id === 'XERA' || id === 'XFIP' || id === 'FIP') return n.toFixed(2)
+  if (id === 'BABIP') return n.toFixed(3)
   if (id === 'WHIFF') return `${n.toFixed(1)}%`
   if (id === 'IP') return n.toFixed(1)
   if (id === 'WPA') return n.toFixed(3)
-  if (id === 'LOBP') {
+  if (id === 'LOBP' || id === 'HRFB') {
     const pct = n > 1.5 ? n : n * 100
     return `${pct.toFixed(1)}%`
   }
@@ -35,6 +36,8 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
   const [q, setQ] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('rp')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [pageSize, setPageSize] = useState<10 | 30 | 100>(30)
+  const [page, setPage] = useState(1)
 
   const enabledCats = useMemo(() => meta.cats.filter((c) => c.enabled && c.weight !== 0), [meta.cats])
 
@@ -57,6 +60,16 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
     })
     return sorted
   }, [q, rows, sortKey, sortDir])
+
+  useEffect(() => {
+    setPage(1)
+  }, [q, rows, sortKey, sortDir, pageSize])
+
+  const pageCount = Math.ceil(view.length / pageSize)
+  const safePage = pageCount === 0 ? 1 : Math.min(page, pageCount)
+  const pageStart = (safePage - 1) * pageSize
+  const pageEndExclusive = pageStart + pageSize
+  const pagedView = pageCount === 0 ? [] : view.slice(pageStart, pageEndExclusive)
 
   function toggleSort(nextKey: SortKey) {
     if (sortKey === nextKey) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
@@ -89,6 +102,45 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
       </div>
 
       <div class={styles.tableWrap}>
+        {pagedView.length > 0 ? (
+          <div class={styles.pagerBar}>
+            <div class={styles.pageSizeGroup}>
+              <div class={styles.pageLabel}>Rows</div>
+              <select
+                class={styles.pageSizeSelect}
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.currentTarget.value) as 10 | 30 | 100)}
+                aria-label="Rows per page"
+              >
+                <option value={10}>10</option>
+                <option value={30}>30</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            <div class={styles.pageNav}>
+              <button
+                class={styles.pageBtn}
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+              >
+                Prev
+              </button>
+              <div class={styles.pageInfo}>
+                {pageStart + 1}-{Math.min(pageEndExclusive, view.length)} / {view.length}
+              </div>
+              <button
+                class={styles.pageBtn}
+                type="button"
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                disabled={safePage >= pageCount}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
         <table class={styles.table}>
           <thead>
             <tr>
@@ -133,9 +185,9 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
                 </td>
               </tr>
             ) : (
-              view.map((r, i) => (
+              pagedView.map((r, i) => (
                 <tr class={styles.tr} key={r.playerId} onClick={() => onPick(r)}>
-                  <td class={styles.tdSmall}>{i + 1}</td>
+                  <td class={styles.tdSmall}>{pageStart + i + 1}</td>
                   <td class={styles.tdPlayer}>
                     <div class={styles.playerName}>{r.name}</div>
                   </td>

@@ -30,6 +30,8 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'FIP', label: 'FIP', weight: 0.6, direction: 'lower', enabled: false },
   { id: 'WPA', label: 'WPA', weight: 0.3, direction: 'higher', enabled: false },
   { id: 'LOBP', label: 'LOB%', weight: 0.4, direction: 'higher', enabled: false },
+  { id: 'BABIP', label: 'BABIP', weight: 0.25, direction: 'lower', enabled: false },
+  { id: 'HRFB', label: 'HR/FB', weight: 0.25, direction: 'lower', enabled: false },
   { id: 'W', label: 'W', weight: 0.25, direction: 'higher', enabled: false },
   { id: 'IP', label: 'IP', weight: 0.25, direction: 'higher', enabled: false },
   { id: 'K9', label: 'K/9', weight: 0.35, direction: 'higher', enabled: false },
@@ -44,8 +46,8 @@ export const CATEGORY_PRESETS: { id: 'classic' | 'savant'; label: string; enable
   },
   {
     id: 'savant',
-    label: 'Savant (Classic + Whiff/xERA/xFIP + WPA/FIP/LOB%)',
-    enabledIds: ['SV', 'HLD', 'K', 'ERA', 'WHIP', 'WHIFF', 'XERA', 'XFIP', 'FIP', 'WPA', 'LOBP'],
+    label: 'Savant (Classic + Whiff/xERA/xFIP + WPA/FIP/LOB%/BABIP/HR/FB)',
+    enabledIds: ['SV', 'HLD', 'K', 'ERA', 'WHIP', 'WHIFF', 'XERA', 'XFIP', 'FIP', 'WPA', 'LOBP', 'BABIP', 'HRFB'],
   },
 ]
 
@@ -80,6 +82,20 @@ function getStat(split: MlbPitchingSplit, key: string): unknown {
   return (split.stat as any)?.[key]
 }
 
+/** (H − HR) / (BF − SO − BB − HBP − HR) from MLB season counting stats. */
+function pitcherBabip(split: MlbPitchingSplit): number | null {
+  const h = num(getStat(split, 'hits'))
+  const hr = num(getStat(split, 'homeRuns'))
+  const bf = num(getStat(split, 'battersFaced'))
+  const k = num(getStat(split, 'strikeOuts'))
+  const bb = num(getStat(split, 'baseOnBalls'))
+  const hbp = num(getStat(split, 'hitByPitch'))
+  if (h == null || hr == null || bf == null || k == null || bb == null || hbp == null) return null
+  const bip = bf - k - bb - hbp - hr
+  if (!(bip > 0)) return null
+  return (h - hr) / bip
+}
+
 export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
   return splits.map((s) => {
     const teamName = s.team?.name ?? ''
@@ -104,6 +120,8 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
       FIP: null,
       WPA: null,
       LOBP: null,
+      BABIP: pitcherBabip(s),
+      HRFB: null,
       K9: num(getStat(s, 'strikeoutsPer9Inn')),
       BB9: num(getStat(s, 'walksPer9Inn')),
     }
@@ -187,6 +205,8 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       FIP: null,
       WPA: null,
       LOBP: null,
+      BABIP: null,
+      HRFB: null,
       K9: null,
       BB9: null,
     }
@@ -206,6 +226,8 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       FIP: null,
       WPA: null,
       LOBP: null,
+      BABIP: null,
+      HRFB: null,
       K9: null,
       BB9: null,
     }

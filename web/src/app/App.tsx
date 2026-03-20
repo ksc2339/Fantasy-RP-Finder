@@ -102,6 +102,7 @@ export function App() {
         nextStats.FIP = f.FIP
         nextStats.WPA = f.WPA
         nextStats.LOBP = f.LOBP
+        nextStats.HRFB = f.HRFB ?? null
       } else {
         nextStats.XFIP = m?.xfip ?? null
       }
@@ -168,7 +169,7 @@ export function App() {
       </main>
 
       <footer class={styles.footer}>
-        Data source: MLB Stats API • This site does not store any player data server-side.
+        스탯 출처: MLB Stats API • FanGraphs • Baseball Savant
       </footer>
 
       <PlayerDrawer row={selected} onClose={() => setSelected(null)} rpMeta={rp.meta} />

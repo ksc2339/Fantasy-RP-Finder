@@ -19,10 +19,11 @@ function fmt(n: number | null, digits = 3) {
 function fmtStat(id: CategoryId, n: number | null) {
   if (n == null || !Number.isFinite(n)) return '—'
   if (id === 'ERA' || id === 'WHIP' || id === 'XERA' || id === 'XFIP' || id === 'FIP') return n.toFixed(2)
+  if (id === 'BABIP') return n.toFixed(3)
   if (id === 'IP') return n.toFixed(1)
   if (id === 'WHIFF') return n.toFixed(1)
-  if (id === 'LOBP') {
-    // FanGraphs LOB% may arrive as either 0.308 or 30.8 depending on the endpoint.
+  if (id === 'LOBP' || id === 'HRFB') {
+    // FanGraphs LOB% / HR/FB may arrive as ratio or percent-style number.
     const pct = n > 1.5 ? n : n * 100
     return `${pct.toFixed(1)}%`
   }
@@ -218,7 +219,13 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                 <div class={styles.pillK}>LOB%</div>
                 <div class={styles.pillV}>{fmtStat('LOBP', row.stats.LOBP)}</div>
               </div>
-              {(['SV', 'HLD', 'SVH', 'NSVH', 'K', 'W', 'IP', 'ERA', 'WHIP', 'K9', 'BB9'] as CategoryId[]).map((id) => (
+              <div class={styles.pill}>
+                <div class={styles.pillK}>HR/FB</div>
+                <div class={styles.pillV}>{fmtStat('HRFB', row.stats.HRFB)}</div>
+              </div>
+              {(
+                ['SV', 'HLD', 'SVH', 'NSVH', 'K', 'W', 'IP', 'ERA', 'WHIP', 'BABIP', 'K9', 'BB9'] as CategoryId[]
+              ).map((id) => (
                 <div class={styles.pill} key={id}>
                   <div class={styles.pillK}>{id}</div>
                   <div class={styles.pillV}>{fmtStat(id, row.stats[id])}</div>

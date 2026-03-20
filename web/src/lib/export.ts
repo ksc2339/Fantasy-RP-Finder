@@ -21,6 +21,8 @@ const COLS: { key: CategoryId; label: string }[] = [
   { key: 'FIP', label: 'FIP' },
   { key: 'WPA', label: 'WPA' },
   { key: 'LOBP', label: 'LOB%' },
+  { key: 'BABIP', label: 'BABIP' },
+  { key: 'HRFB', label: 'HR/FB' },
   { key: 'K9', label: 'K/9' },
   { key: 'BB9', label: 'BB/9' },
 ]

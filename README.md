@@ -42,7 +42,8 @@ npm run preview
 ## 데이터 출처 / 한계
 
 - **Data source**: MLB Stats API (클라이언트에서 직접 호출)
-- Yahoo Fantasy / FanGraphs는 인증/제약 이슈로 MVP에 포함하지 않았습니다(추후 옵션 확장 가능).
+- **FanGraphs**(xFIP 등): 빌드 시 스크랩 JSON으로만 연동합니다.
+- **Baseball Savant**(Whiff%, xERA, xFIP): 빌드 시 파일로 제공됩니다.
 
 ## 브라우저 캐시(하루 1회)
 
