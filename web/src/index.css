@@ -1,15 +1,15 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
+  --text: #3d4a55;
+  --text-h: #0a1620;
+  --bg: #eef3f7;
+  --border: #b0c4d0;
+  --code-bg: #e4edf5;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
+  --social-bg: rgba(238, 243, 247, 0.72);
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(10, 30, 50, 0.14) 0 12px 28px -8px, rgba(10, 30, 50, 0.08) 0 6px 14px -6px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -19,7 +19,7 @@
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
-  background: var(--bg);
+  background: transparent;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -32,17 +32,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
+    --text: #a8b5ad;
+    --text-h: #e8f0ea;
+    --bg: #141c18;
+    --border: #2a3d32;
+    --code-bg: #1a2620;
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
+    --social-bg: rgba(30, 42, 36, 0.55);
     --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+      rgba(0, 0, 0, 0.45) 0 12px 28px -8px, rgba(0, 0, 0, 0.3) 0 6px 14px -6px;
   }
 
   #social .button-icon {
@@ -50,8 +50,64 @@
   }
 }
 
+html {
+  min-height: 100%;
+}
+
+/* 야구장 · 야간(라이트): 황혼 하늘, 켜진 조명, 어두운 잔디, 내야 흙 */
 body {
   margin: 0;
+  min-height: 100svh;
+  background-color: #142a20;
+  background-image:
+    radial-gradient(ellipse 95% 75% at 50% 42%, transparent 35%, rgba(5, 12, 22, 0.45) 100%),
+    radial-gradient(ellipse 48% 40% at 10% -2%, rgba(255, 248, 220, 0.28), transparent 58%),
+    radial-gradient(ellipse 48% 40% at 90% -2%, rgba(255, 245, 210, 0.26), transparent 58%),
+    radial-gradient(ellipse 70% 48% at 50% -6%, rgba(255, 252, 235, 0.12), transparent 52%),
+    repeating-linear-gradient(
+      92deg,
+      transparent 0,
+      transparent 22px,
+      rgba(255, 255, 255, 0.022) 22px,
+      rgba(255, 255, 255, 0.022) 44px
+    ),
+    radial-gradient(ellipse 125% 68% at 50% 102%, rgba(130, 92, 52, 0.42) 0%, rgba(80, 58, 36, 0.22) 48%, transparent 62%),
+    linear-gradient(
+      188deg,
+      #0f1830 0%,
+      #243a62 10%,
+      #4a2d4e 18%,
+      #c45c3c 24%,
+      #3d5280 32%,
+      #2a4a38 48%,
+      #245a36 62%,
+      #163828 82%,
+      #0c1810 100%
+    );
+  background-attachment: fixed;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #030508;
+    background-image:
+      radial-gradient(ellipse 100% 80% at 50% 38%, transparent 25%, rgba(0, 0, 0, 0.55) 100%),
+      radial-gradient(ellipse 42% 38% at 5% -3%, rgba(255, 250, 230, 0.16), transparent 52%),
+      radial-gradient(ellipse 42% 38% at 95% -3%, rgba(255, 248, 220, 0.14), transparent 52%),
+      radial-gradient(ellipse 58% 42% at 28% -4%, rgba(200, 220, 255, 0.06), transparent 48%),
+      radial-gradient(ellipse 58% 42% at 72% -4%, rgba(200, 220, 255, 0.05), transparent 48%),
+      radial-gradient(ellipse 72% 50% at 50% -8%, rgba(255, 255, 250, 0.07), transparent 50%),
+      repeating-linear-gradient(
+        92deg,
+        transparent 0,
+        transparent 22px,
+        rgba(255, 255, 255, 0.014) 22px,
+        rgba(255, 255, 255, 0.014) 44px
+      ),
+      radial-gradient(ellipse 118% 72% at 50% 108%, rgba(55, 40, 28, 0.65) 0%, rgba(30, 22, 14, 0.35) 42%, transparent 58%),
+      linear-gradient(188deg, #040810 0%, #0a1628 14%, #0d2220 38%, #0a1812 62%, #030806 100%);
+    background-attachment: fixed;
+  }
 }
 
 #app {
@@ -64,6 +120,7 @@ body {
   flex-direction: column;
   box-sizing: border-box;
   padding: 0;
+  background: transparent;
 }
 
 h1,

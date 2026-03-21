@@ -40,7 +40,7 @@
   font-size: 13px;
   font-weight: 650;
   color: var(--text-h);
-  margin: 4px 0 8px;
+  margin: 2px 0 6px;
 }
 
 .subTitle + .catSection {
@@ -48,14 +48,15 @@
 }
 
 .catSection + .catSection {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .catSectionTitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
   color: color-mix(in oklab, var(--text) 88%, transparent);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
 }
 
 .presetRow {
@@ -149,23 +150,26 @@
 .cats {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .catRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 86px);
+  display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
 .catCheck {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.2;
   user-select: none;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .catLabel {
@@ -173,16 +177,16 @@
 }
 
 .weight {
-  height: 32px;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+  flex: 0 0 3.25rem;
+  width: 3.25rem;
+  height: 26px;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: color-mix(in oklab, var(--bg) 90%, transparent);
   color: var(--text-h);
-  padding: 0 10px;
+  padding: 0 6px;
+  font-size: 12px;
 }
 
 .weight:disabled {
