@@ -148,16 +148,17 @@
 }
 
 .cats {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 10px;
+  min-width: 0;
 }
 
 .catRow {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -168,12 +169,15 @@
   font-size: 12px;
   line-height: 1.2;
   user-select: none;
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .catLabel {
   color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .weight {
@@ -250,6 +254,13 @@
 
 @media (max-width: 520px) {
   .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 한 줄 2스탯이 비좁을 때만 1열 */
+@media (max-width: 340px) {
+  .cats {
     grid-template-columns: 1fr;
   }
 }
