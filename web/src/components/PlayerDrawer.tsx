@@ -39,6 +39,14 @@ function fmtPitchHand(code: string | null) {
   return code
 }
 
+function fmtRrType(t: string | null) {
+  if (!t) return ''
+  if (t === 'mlb-sp' || t === 'mlb-bp') return 'MLB'
+  if (t.startsWith('il-')) return 'IL'
+  if (t.startsWith('off-')) return 'Minors/대기'
+  return t
+}
+
 export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
   const open = !!row
   const enabled = rpMeta.cats.filter((c) => c.enabled && c.weight !== 0)
@@ -121,6 +129,14 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                 />
                 <div class={styles.name}>{row.name}</div>
                 <div class={styles.team}>{row.team || '—'}</div>
+                <div
+                  class={styles.rrLine}
+                  title="FanGraphs Roster Resource 깊이표 보직(스냅샷)"
+                >
+                  보직: {row.rrRole ?? '—'}
+                  {row.rrType ? ` · ${fmtRrType(row.rrType)}` : ''}
+                  {row.rrPosition1 ? ` · ${row.rrPosition1}` : ''}
+                </div>
               </div>
               <button class={styles.close} onClick={onClose} aria-label="Close">
                 ×
@@ -224,7 +240,28 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                 <div class={styles.pillV}>{fmtStat('HRFB', row.stats.HRFB)}</div>
               </div>
               {(
-                ['SV', 'HLD', 'SVH', 'NSVH', 'K', 'W', 'IP', 'ERA', 'WHIP', 'BABIP', 'K9', 'BB9'] as CategoryId[]
+                [
+                  'SV',
+                  'HLD',
+                  'SVH',
+                  'NSVH',
+                  'K',
+                  'W',
+                  'L',
+                  'IP',
+                  'ERA',
+                  'WHIP',
+                  'BB',
+                  'HR',
+                  'GIDP',
+                  'RAPP',
+                  'QS',
+                  'H',
+                  'ER',
+                  'BABIP',
+                  'K9',
+                  'BB9',
+                ] as CategoryId[]
               ).map((id) => (
                 <div class={styles.pill} key={id}>
                   <div class={styles.pillK}>{id}</div>

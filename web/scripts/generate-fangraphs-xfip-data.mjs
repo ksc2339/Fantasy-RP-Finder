@@ -68,10 +68,11 @@ function collectFanGraphsPitcherFields(nextData) {
         numOrNull(node.LOB_pct_) ??
         numOrNull(node.LOB)
       const HRFB = numOrNull(node['HR/FB'])
+      const QS = numOrNull(node.QS)
 
       // Require xFIP to consider the row present; other fields can be null.
       if (xFIP != null) {
-        byPlayerId[String(idNum)] = { xFIP, FIP, WPA, LOBP, HRFB }
+        byPlayerId[String(idNum)] = { xFIP, FIP, WPA, LOBP, HRFB, QS }
         found++
       }
     }

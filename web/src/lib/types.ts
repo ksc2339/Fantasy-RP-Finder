@@ -3,7 +3,7 @@ export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 export type MlbPitchingSplit = {
   season: string
   player: { id: number; fullName: string }
-  team?: { id: number; name: string }
+  team?: { id: number; name: string; abbreviation?: string }
   stat: Record<string, string | number | null | undefined>
 }
 
@@ -19,9 +19,13 @@ export type CategoryId =
   | 'SVH'
   | 'NSVH'
   | 'W'
+  | 'L'
   | 'IP'
   | 'ERA'
   | 'WHIP'
+  | 'BB'
+  | 'HR'
+  | 'GIDP'
   | 'WHIFF'
   | 'XERA'
   | 'XFIP'
@@ -30,6 +34,10 @@ export type CategoryId =
   | 'LOBP'
   | 'BABIP'
   | 'HRFB'
+  | 'RAPP'
+  | 'QS'
+  | 'H'
+  | 'ER'
   | 'K9'
   | 'BB9'
 
@@ -54,6 +62,11 @@ export type PlayerRow = {
   team: string
   age: number | null
   pitchHand: string | null
+  /** FanGraphs Roster Resource depth chart slot (e.g. CL, SP3, MID). */
+  rrRole: string | null
+  /** Roster Resource row type: mlb-sp, mlb-bp, il-sp, off-sp, … */
+  rrType: string | null
+  rrPosition1: string | null
   stats: Record<CategoryId, number | null>
   raw: MlbPitchingSplit
 }

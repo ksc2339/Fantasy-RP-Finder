@@ -26,6 +26,52 @@ function coerceSplits(x: unknown): MlbPitchingSplit[] {
   return splits as MlbPitchingSplit[]
 }
 
+const LS_TEAM_ABBR = 'bullpen-rp:mlbTeamAbbr:v1'
+
+async function getTeamIdToAbbreviation(signal?: AbortSignal): Promise<Map<number, string>> {
+  const todayLA = getLosAngelesDayStamp()
+  const cached = localStorage.getItem(LS_TEAM_ABBR)
+  if (cached) {
+    try {
+      const p = JSON.parse(cached) as { day?: string; map?: Record<string, string> }
+      if (p?.day === todayLA && p.map && typeof p.map === 'object') {
+        return new Map(Object.entries(p.map).map(([id, ab]) => [Number(id), ab]))
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const res = await fetch('https://statsapi.mlb.com/api/v1/teams?sportId=1&activeStatus=ACTIVE', {
+    signal,
+    headers: { Accept: 'application/json' },
+  })
+  if (!res.ok) return new Map()
+  const json = (await res.json()) as { teams?: { id: number; abbreviation?: string }[] }
+  const map = new Map<number, string>()
+  for (const t of json.teams ?? []) {
+    if (typeof t.id === 'number' && t.abbreviation) map.set(t.id, t.abbreviation)
+  }
+  try {
+    localStorage.setItem(LS_TEAM_ABBR, JSON.stringify({ day: todayLA, map: Object.fromEntries(map) }))
+  } catch {
+    // quota ignore
+  }
+  return map
+}
+
+function enrichSplitsWithTeamAbbreviation(
+  splits: MlbPitchingSplit[],
+  abbrById: Map<number, string>,
+): MlbPitchingSplit[] {
+  return splits.map((s) => {
+    const t = s.team
+    if (!t?.id) return s
+    const abbr = abbrById.get(t.id) ?? t.abbreviation
+    if (!abbr) return s
+    return { ...s, team: { ...t, abbreviation: abbr } }
+  })
+}
+
 export async function fetchSeasonPitchingStats({
   season,
   signal,
@@ -39,7 +85,9 @@ export async function fetchSeasonPitchingStats({
     try {
       const parsed = JSON.parse(cached) as SeasonPitchingResponse & { cachedDay?: string }
       if (parsed?.cachedDay === todayLA) {
-        return { fetchedAt: parsed.fetchedAt, splits: parsed.splits }
+        const abbr = await getTeamIdToAbbreviation(signal)
+        const splits = enrichSplitsWithTeamAbbreviation(parsed.splits, abbr)
+        return { fetchedAt: parsed.fetchedAt, splits }
       }
       // Day changed (Pacific): keep old cached payload as a fallback in case refresh fails.
       fallback = { fetchedAt: parsed?.fetchedAt, splits: parsed?.splits }
@@ -53,7 +101,9 @@ export async function fetchSeasonPitchingStats({
     const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`MLB Stats API error: ${res.status} ${res.statusText}`)
     const json = (await res.json()) as unknown
-    const splits = coerceSplits(json)
+    const rawSplits = coerceSplits(json)
+    const abbr = await getTeamIdToAbbreviation(signal)
+    const splits = enrichSplitsWithTeamAbbreviation(rawSplits, abbr)
     const out: SeasonPitchingResponse & { cachedAt: number; cachedDay: string } = {
       fetchedAt: new Date().toISOString(),
       cachedAt: Date.now(),
@@ -63,7 +113,11 @@ export async function fetchSeasonPitchingStats({
     localStorage.setItem(key, JSON.stringify(out))
     return { fetchedAt: out.fetchedAt, splits: out.splits }
   } catch (e) {
-    if (fallback?.splits?.length) return fallback
+    if (fallback?.splits?.length) {
+      const abbr = await getTeamIdToAbbreviation(signal)
+      const splits = enrichSplitsWithTeamAbbreviation(fallback.splits, abbr)
+      return { fetchedAt: fallback.fetchedAt, splits }
+    }
     throw e
   }
 }

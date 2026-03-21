@@ -12,10 +12,12 @@ export type FangraphsPitcherFields = {
   LOBP: number | null
   /** FanGraphs HR/FB as a ratio (e.g. 0.091 ≈ 9.1%). */
   HRFB: number | null
+  /** FanGraphs Quality Starts count. */
+  QS: number | null
 }
 
 // Bump version so older sparse 30-player payloads don't stick around.
-const LS_PREFIX = 'bullpen-rp:fangraphsXfip:v4'
+const LS_PREFIX = 'bullpen-rp:fangraphsXfip:v6'
 
 function dayStampLA(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {

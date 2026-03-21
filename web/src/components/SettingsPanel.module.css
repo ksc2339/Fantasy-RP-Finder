@@ -43,6 +43,21 @@
   margin: 4px 0 8px;
 }
 
+.subTitle + .catSection {
+  margin-top: 6px;
+}
+
+.catSection + .catSection {
+  margin-top: 14px;
+}
+
+.catSectionTitle {
+  font-size: 12px;
+  font-weight: 650;
+  color: color-mix(in oklab, var(--text) 88%, transparent);
+  margin-bottom: 8px;
+}
+
 .presetRow {
   display: flex;
   align-items: center;
@@ -155,12 +170,6 @@
 
 .catLabel {
   color: var(--text-h);
-}
-
-.catDir {
-  margin-left: 6px;
-  color: color-mix(in oklab, var(--text) 80%, transparent);
-  font-size: 12px;
 }
 
 .weight {

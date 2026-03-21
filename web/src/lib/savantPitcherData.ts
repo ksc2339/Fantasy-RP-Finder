@@ -76,6 +76,7 @@ export function clearDataCaches() {
       k.startsWith('bullpen-rp:savantPitcher:') ||
       k.startsWith('bullpen-rp:mlbPerson:') ||
       k.startsWith('bullpen-rp:fangraphsXfip:') ||
+      k.startsWith('bullpen-rp:rosterResource:') ||
       k.startsWith('bullpen-rp:whiffDaily:') ||
       k.startsWith('bullpen-rp:savantDaily:') ||
       k.startsWith('bullpen-rp:savantWhiff:')

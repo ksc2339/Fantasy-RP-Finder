@@ -9,6 +9,9 @@ web/dist-ssr/
 web/.vite/
 web/public/data/
 
+# One-off FanGraphs / RR probes (not shipped)
+web/scripts/probe-*.mjs
+
 # OS / editor
 .DS_Store
 Thumbs.db

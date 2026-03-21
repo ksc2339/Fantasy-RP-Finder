@@ -33,26 +33,106 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'BABIP', label: 'BABIP', weight: 0.25, direction: 'lower', enabled: false },
   { id: 'HRFB', label: 'HR/FB', weight: 0.25, direction: 'lower', enabled: false },
   { id: 'W', label: 'W', weight: 0.25, direction: 'higher', enabled: false },
+  { id: 'L', label: 'L', weight: 0.25, direction: 'lower', enabled: false },
   { id: 'IP', label: 'IP', weight: 0.25, direction: 'higher', enabled: false },
   { id: 'K9', label: 'K/9', weight: 0.35, direction: 'higher', enabled: false },
   { id: 'BB9', label: 'BB/9', weight: 0.2, direction: 'lower', enabled: false },
+  { id: 'BB', label: 'BB', weight: 0.25, direction: 'lower', enabled: false },
+  { id: 'HR', label: 'HR', weight: 0.25, direction: 'lower', enabled: false },
+  { id: 'GIDP', label: 'GIDP', weight: 0.25, direction: 'higher', enabled: false },
+  { id: 'H', label: 'H', weight: 0.25, direction: 'lower', enabled: false },
+  { id: 'ER', label: 'ER', weight: 0.25, direction: 'lower', enabled: false },
+  { id: 'RAPP', label: 'RAPP', weight: 0.25, direction: 'higher', enabled: false },
+  { id: 'QS', label: 'QS', weight: 0.25, direction: 'higher', enabled: false },
 ]
 
-export const CATEGORY_PRESETS: { id: 'classic' | 'savant'; label: string; enabledIds: CategoryId[] }[] = [
+/** UI order for Settings: fantasy-league stats first; rest are "세부 지표". */
+export const FANTASY_LEAGUE_CATEGORY_ORDER: CategoryId[] = [
+  'IP',
+  'W',
+  'L',
+  'H',
+  'ER',
+  'HR',
+  'BB',
+  'K',
+  'GIDP',
+  'ERA',
+  'WHIP',
+  'K9',
+  'QS',
+  'SV',
+  'HLD',
+  'SVH',
+  'NSVH',
+  'RAPP',
+]
+
+type CategoryPresetId = 'adl' | 'angels' | 'dor' | 'dbv' | 'twenty' | 'infield' | 'jays'
+
+export const CATEGORY_PRESETS: {
+  id: CategoryPresetId
+  label: string
+  enabledIds: CategoryId[]
+  enabledWeight?: number
+  enabledWeights?: Partial<Record<CategoryId, number>>
+}[] = [
   {
-    id: 'classic',
-    label: 'Classic (SV+HLD+K+ERA+WHIP)',
-    enabledIds: ['SV', 'HLD', 'K', 'ERA', 'WHIP'],
+    id: 'adl',
+    label: 'ADL',
+    enabledIds: ['IP', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'QS', 'SVH'],
+    enabledWeight: 1,
   },
   {
-    id: 'savant',
-    label: 'Savant (Classic + Whiff/xERA/xFIP + WPA/FIP/LOB%/BABIP/HR/FB)',
-    enabledIds: ['SV', 'HLD', 'K', 'ERA', 'WHIP', 'WHIFF', 'XERA', 'XFIP', 'FIP', 'WPA', 'LOBP', 'BABIP', 'HRFB'],
+    id: 'angels',
+    label: '에인절스',
+    enabledIds: ['IP', 'W', 'HR', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'QS', 'SVH'],
+    enabledWeight: 1,
+  },
+  {
+    id: 'dor',
+    label: 'DOR',
+    enabledIds: ['IP', 'W', 'HR', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'QS', 'SVH'],
+    enabledWeight: 1,
+  },
+  {
+    id: 'dbv',
+    label: 'DBV',
+    enabledIds: ['IP', 'W', 'H', 'ER', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'QS', 'SVH'],
+    enabledWeight: 1,
+  },
+  {
+    id: 'twenty',
+    label: '20인 리그',
+    enabledIds: ['IP', 'W', 'L', 'SV', 'HR', 'BB', 'K', 'GIDP', 'HLD', 'ERA', 'WHIP', 'RAPP', 'QS'],
+    enabledWeight: 1,
+  },
+  {
+    id: 'infield',
+    label: 'Infield Report',
+    enabledIds: ['IP', 'W', 'L', 'SV', 'HR', 'BB', 'K', 'GIDP', 'HLD', 'ERA', 'WHIP', 'RAPP', 'QS'],
+    enabledWeight: 1,
+  },
+  {
+    id: 'jays',
+    label: 'Jays Go~',
+    enabledIds: ['W', 'L', 'HR', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'K9', 'QS', 'NSVH'],
+    enabledWeight: 1,
   },
 ]
 
-export function applyCategoryPreset(categories: CategoryConfig[], enabledIds: Set<CategoryId>): CategoryConfig[] {
-  return categories.map((c) => ({ ...c, enabled: enabledIds.has(c.id) }))
+export function applyCategoryPreset(
+  categories: CategoryConfig[],
+  enabledIds: Set<CategoryId>,
+  opts?: { enabledWeight?: number; enabledWeights?: Partial<Record<CategoryId, number>> },
+): CategoryConfig[] {
+  return categories.map((c) => {
+    const enabled = enabledIds.has(c.id)
+    if (!enabled) return { ...c, enabled }
+    const weightOverride = opts?.enabledWeights?.[c.id] ?? opts?.enabledWeight
+    if (weightOverride != null) return { ...c, enabled, weight: weightOverride }
+    return { ...c, enabled }
+  })
 }
 
 function num(x: unknown): number | null {
@@ -96,14 +176,27 @@ function pitcherBabip(split: MlbPitchingSplit): number | null {
   return (h - hr) / bip
 }
 
+function reliefAppearances(gamesPitched: number | null, gamesStarted: number | null): number | null {
+  if (gamesPitched == null || gamesStarted == null) return null
+  const v = gamesPitched - gamesStarted
+  if (!Number.isFinite(v) || v < 0) return null
+  return v
+}
+
 export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
   return splits.map((s) => {
-    const teamName = s.team?.name ?? ''
+    const t = s.team
+    const teamLabel =
+      (t?.abbreviation && String(t.abbreviation).trim()) || t?.name || ''
     const age = num(getStat(s, 'age'))
     const sv = num(getStat(s, 'saves'))
     const hld = num(getStat(s, 'holds'))
     const bs = num(getStat(s, 'blownSaves'))
     const svh = (sv ?? 0) + (hld ?? 0)
+    const gamesStarted = num(getStat(s, 'gamesStarted'))
+    const gamesPitched = num(getStat(s, 'gamesPitched')) ?? num(getStat(s, 'gamesPlayed')) ?? null
+    const ip = inningsToFloat(getStat(s, 'inningsPitched'))
+    const earnedRuns = num(getStat(s, 'earnedRuns'))
     const stats: PlayerRow['stats'] = {
       K: num(getStat(s, 'strikeOuts')),
       SV: sv,
@@ -111,7 +204,16 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
       SVH: Number.isFinite(svh) ? svh : null,
       NSVH: Number.isFinite(svh) ? svh - (bs ?? 0) : null,
       W: num(getStat(s, 'wins')),
-      IP: inningsToFloat(getStat(s, 'inningsPitched')),
+      L: num(getStat(s, 'losses')),
+      BB: num(getStat(s, 'baseOnBalls')),
+      HR: num(getStat(s, 'homeRuns')),
+      GIDP: num(getStat(s, 'groundIntoDoublePlay')),
+      H: num(getStat(s, 'hits')),
+      ER: earnedRuns,
+      RAPP: reliefAppearances(gamesPitched, gamesStarted),
+      // QS comes from FanGraphs (type=8 leaderboards scrape), not MLB Stats API.
+      QS: null,
+      IP: ip,
       ERA: num(getStat(s, 'era')),
       WHIP: num(getStat(s, 'whip')),
       WHIFF: null,
@@ -128,23 +230,16 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
     return {
       playerId: s.player.id,
       name: s.player.fullName,
-      team: teamName,
+      team: teamLabel,
       age,
       pitchHand: null,
+      rrRole: null,
+      rrType: null,
+      rrPosition1: null,
       stats,
       raw: s,
     }
   })
-}
-
-function mean(vals: number[]): number {
-  return vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)
-}
-
-function stdev(vals: number[], mu: number): number {
-  if (vals.length < 2) return 0
-  const v = vals.reduce((acc, x) => acc + (x - mu) * (x - mu), 0) / (vals.length - 1)
-  return Math.sqrt(v)
 }
 
 function relieverFilter(rows: PlayerRow[], cfg: RpConfig) {
@@ -169,6 +264,16 @@ function relieverFilter(rows: PlayerRow[], cfg: RpConfig) {
     included.push(r)
   }
   return { included, excluded }
+}
+
+function mean(vals: number[]): number {
+  return vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length)
+}
+
+function stdev(vals: number[], mu: number): number {
+  if (vals.length < 2) return 0
+  const v = vals.reduce((acc, x) => acc + (x - mu) * (x - mu), 0) / (vals.length - 1)
+  return Math.sqrt(v)
 }
 
 export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig[]) {
@@ -196,9 +301,13 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       SVH: null,
       NSVH: null,
       W: null,
+      L: null,
       IP: null,
       ERA: null,
       WHIP: null,
+      BB: null,
+      HR: null,
+      GIDP: null,
       WHIFF: null,
       XERA: null,
       XFIP: null,
@@ -207,6 +316,10 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       LOBP: null,
       BABIP: null,
       HRFB: null,
+      RAPP: null,
+      QS: null,
+      H: null,
+      ER: null,
       K9: null,
       BB9: null,
     }
@@ -217,9 +330,13 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       SVH: null,
       NSVH: null,
       W: null,
+      L: null,
       IP: null,
       ERA: null,
       WHIP: null,
+      BB: null,
+      HR: null,
+      GIDP: null,
       WHIFF: null,
       XERA: null,
       XFIP: null,
@@ -228,6 +345,10 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
       LOBP: null,
       BABIP: null,
       HRFB: null,
+      RAPP: null,
+      QS: null,
+      H: null,
+      ER: null,
       K9: null,
       BB9: null,
     }

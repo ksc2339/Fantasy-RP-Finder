@@ -9,7 +9,7 @@ type Props = {
   onPick: (row: PlayerRpRow) => void
 }
 
-type SortKey = 'rp' | 'name' | 'team' | CategoryId
+type SortKey = 'rp' | 'name' | 'team' | 'rrRole' | CategoryId
 type SortDir = 'asc' | 'desc'
 
 function fmt(n: number | null, digits = 2) {
@@ -44,7 +44,15 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
   const view = useMemo(() => {
     const query = q.trim().toLowerCase()
     const filtered = query
-      ? rows.filter((r) => r.name.toLowerCase().includes(query) || r.team.toLowerCase().includes(query))
+      ? rows.filter((r) => {
+          const fullTeam = r.raw.team?.name?.toLowerCase() ?? ''
+          return (
+            r.name.toLowerCase().includes(query) ||
+            r.team.toLowerCase().includes(query) ||
+            fullTeam.includes(query) ||
+            (r.rrRole?.toLowerCase().includes(query) ?? false)
+          )
+        })
       : rows
 
     const dir = sortDir === 'asc' ? 1 : -1
@@ -52,6 +60,7 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
       if (sortKey === 'rp') return dir * (a.rp - b.rp)
       if (sortKey === 'name') return dir * a.name.localeCompare(b.name)
       if (sortKey === 'team') return dir * a.team.localeCompare(b.team)
+      if (sortKey === 'rrRole') return dir * (a.rrRole ?? '').localeCompare(b.rrRole ?? '')
       const av = a.stats[sortKey]
       const bv = b.stats[sortKey]
       const an = av ?? -Infinity
@@ -75,7 +84,7 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
     if (sortKey === nextKey) setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
     else {
       setSortKey(nextKey)
-      setSortDir(nextKey === 'name' || nextKey === 'team' ? 'asc' : 'desc')
+      setSortDir(nextKey === 'name' || nextKey === 'team' || nextKey === 'rrRole' ? 'asc' : 'desc')
     }
   }
 
@@ -155,6 +164,11 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
                   Team
                 </button>
               </th>
+              <th class={styles.thBtn} title="FanGraphs Roster Resource 깊이표 보직(스냅샷)">
+                <button class={styles.thButton} onClick={() => toggleSort('rrRole')}>
+                  보직
+                </button>
+              </th>
               <th class={styles.thBtn}>
                 <button class={styles.thButton} onClick={() => toggleSort('rp')}>
                   RP
@@ -172,13 +186,13 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
           <tbody>
             {status === 'loading' && rows.length === 0 ? (
               <tr>
-                <td class={styles.td} colSpan={4 + enabledCats.length}>
+                <td class={styles.td} colSpan={5 + enabledCats.length}>
                   Loading…
                 </td>
               </tr>
             ) : view.length === 0 ? (
               <tr>
-                <td class={styles.td} colSpan={4 + enabledCats.length}>
+                <td class={styles.td} colSpan={5 + enabledCats.length}>
                   {rows.length === 0 && meta.excludedCount > 0
                     ? 'No relievers matched your filters. Try lowering Min IP / Min Games or increasing Max Starts.'
                     : 'No results.'}
@@ -192,6 +206,7 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
                     <div class={styles.playerName}>{r.name}</div>
                   </td>
                   <td class={styles.td}>{r.team || '—'}</td>
+                  <td class={styles.td}>{r.rrRole ?? '—'}</td>
                   <td class={styles.tdNum}>{fmt(r.rp, 3)}</td>
                   {enabledCats.map((c) => (
                     <td class={styles.tdNum} key={c.id}>

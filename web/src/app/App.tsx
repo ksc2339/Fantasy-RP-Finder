@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks'
 import { fetchSeasonPitchingStats } from '../lib/mlbApi'
 import { getSavantPitcherMetricsMap, type SavantPitcherMetrics } from '../lib/savantPitcherData'
 import { getFangraphsXfipMap, type FangraphsPitcherFields } from '../lib/fangraphsXfipData'
+import { getRosterResourceRolesMap, type RosterResourcePitcherFields } from '../lib/rosterResourceRoles'
 import type { CategoryConfig, PlayerRpRow, RpConfig } from '../lib/types'
 import { DEFAULT_CATEGORIES, DEFAULT_RP_CONFIG, buildRows, computeRp } from '../lib/rp'
 import { SettingsPanel } from '../components/SettingsPanel'
@@ -32,6 +33,9 @@ export function App() {
   const [raw, setRaw] = useState<Awaited<ReturnType<typeof fetchSeasonPitchingStats>> | null>(null)
   const [savantByPlayerId, setSavantByPlayerId] = useState<Record<string, SavantPitcherMetrics> | null>(null)
   const [fangraphsByPlayerId, setFangraphsByPlayerId] = useState<Record<string, FangraphsPitcherFields> | null>(null)
+  const [rosterResourceByPlayerId, setRosterResourceByPlayerId] = useState<
+    Record<string, RosterResourcePitcherFields> | null
+  >(null)
   const [selected, setSelected] = useState<PlayerRpRow | null>(null)
 
   useEffect(() => {
@@ -44,6 +48,7 @@ export function App() {
       setState({ status: 'loading' })
       setSavantByPlayerId(null)
       setFangraphsByPlayerId(null)
+      setRosterResourceByPlayerId(null)
       try {
         const res = await fetchSeasonPitchingStats({ season: cfg.season })
         if (cancelled) return
@@ -69,6 +74,15 @@ export function App() {
           setFangraphsByPlayerId(null)
         }
 
+        try {
+          const rrRes = await getRosterResourceRolesMap()
+          if (cancelled) return
+          setRosterResourceByPlayerId(rrRes.byPlayerId)
+        } catch {
+          if (cancelled) return
+          setRosterResourceByPlayerId(null)
+        }
+
         setState({ status: 'ready' })
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Unknown error'
@@ -84,13 +98,14 @@ export function App() {
   const rows = useMemo(() => {
     if (!raw) return []
     const base = buildRows(raw.splits)
-    if (!savantByPlayerId && !fangraphsByPlayerId) return base
+    if (!savantByPlayerId && !fangraphsByPlayerId && !rosterResourceByPlayerId) return base
 
     // Inject Savant values so they can be used as z-score categories.
     return base.map((r) => {
       const m = savantByPlayerId ? savantByPlayerId[String(r.playerId)] : undefined
       const f = fangraphsByPlayerId ? fangraphsByPlayerId[String(r.playerId)] : undefined
-      if (!m && (f == null || f == undefined)) return r
+      const rr = rosterResourceByPlayerId ? rosterResourceByPlayerId[String(r.playerId)] : undefined
+      if (!m && !f && !rr) return r
 
       const nextStats = { ...r.stats }
       if (m) {
@@ -103,15 +118,23 @@ export function App() {
         nextStats.WPA = f.WPA
         nextStats.LOBP = f.LOBP
         nextStats.HRFB = f.HRFB ?? null
+        nextStats.QS = f.QS ?? null
       } else {
         nextStats.XFIP = m?.xfip ?? null
       }
       return {
         ...r,
         stats: nextStats,
+        ...(rr
+          ? {
+              rrRole: rr.rrRole,
+              rrType: rr.rrType,
+              rrPosition1: rr.position1,
+            }
+          : {}),
       }
     })
-  }, [raw, savantByPlayerId, fangraphsByPlayerId])
+  }, [raw, savantByPlayerId, fangraphsByPlayerId, rosterResourceByPlayerId])
 
   const rp = useMemo(() => {
     return computeRp(rows, cfg, cats)
@@ -133,8 +156,7 @@ export function App() {
     <div class={styles.page}>
       <header class={styles.header}>
         <div>
-          <div class={styles.title}>Bullpen RP</div>
-          <div class={styles.subtitle}>MLB relievers only • z-score based • GitHub Pages friendly</div>
+          <div class={styles.title}>판타지 베이스볼 불펜 구하기</div>
         </div>
         {headerRight}
       </header>
@@ -169,7 +191,7 @@ export function App() {
       </main>
 
       <footer class={styles.footer}>
-        스탯 출처: MLB Stats API • FanGraphs • Baseball Savant
+        스탯 출처: MLB Stats API • FanGraphs • FanGraphs Roster Resource • Baseball Savant
       </footer>
 
       <PlayerDrawer row={selected} onClose={() => setSelected(null)} rpMeta={rp.meta} />

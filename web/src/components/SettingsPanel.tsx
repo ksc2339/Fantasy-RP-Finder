@@ -1,5 +1,12 @@
-import type { CategoryConfig, RpConfig } from '../lib/types'
-import { CATEGORY_PRESETS, DEFAULT_CATEGORIES, DEFAULT_RP_CONFIG, applyCategoryPreset } from '../lib/rp'
+import { useMemo } from 'preact/hooks'
+import type { CategoryConfig, CategoryId, RpConfig } from '../lib/types'
+import {
+  CATEGORY_PRESETS,
+  DEFAULT_CATEGORIES,
+  DEFAULT_RP_CONFIG,
+  FANTASY_LEAGUE_CATEGORY_ORDER,
+  applyCategoryPreset,
+} from '../lib/rp'
 import { clearDataCaches } from '../lib/savantPitcherData'
 import styles from './SettingsPanel.module.css'
 
@@ -20,6 +27,51 @@ export function SettingsPanel({
   status,
   lastUpdated,
 }: Props) {
+  const fantasyIdSet = useMemo(() => new Set<CategoryId>(FANTASY_LEAGUE_CATEGORY_ORDER), [])
+
+  const { fantasyCats, detailCats } = useMemo(() => {
+    const byId = new Map(categories.map((c) => [c.id, c]))
+    const fantasy = FANTASY_LEAGUE_CATEGORY_ORDER.map((id) => byId.get(id)).filter(
+      (c): c is CategoryConfig => c != null,
+    )
+    const detail = DEFAULT_CATEGORIES.map((c) => c.id)
+      .filter((id) => !fantasyIdSet.has(id))
+      .map((id) => byId.get(id))
+      .filter((c): c is CategoryConfig => c != null)
+    return { fantasyCats: fantasy, detailCats: detail }
+  }, [categories, fantasyIdSet])
+
+  function renderCatRow(c: CategoryConfig) {
+    return (
+      <div class={styles.catRow} key={c.id}>
+        <label class={styles.catCheck}>
+          <input
+            type="checkbox"
+            checked={c.enabled}
+            onChange={(e) => {
+              const enabled = (e.currentTarget as HTMLInputElement).checked
+              setCategories(categories.map((x) => (x.id === c.id ? { ...x, enabled } : x)))
+            }}
+          />
+          <span class={styles.catLabel}>{c.label}</span>
+        </label>
+
+        <input
+          class={styles.weight}
+          type="number"
+          step={0.05}
+          value={c.weight}
+          onInput={(e) => {
+            const weight = (e.currentTarget as HTMLInputElement).valueAsNumber
+            setCategories(categories.map((x) => (x.id === c.id ? { ...x, weight } : x)))
+          }}
+          disabled={!c.enabled}
+          aria-label={`${c.label} weight`}
+        />
+      </div>
+    )
+  }
+
   return (
     <div class={styles.card}>
       <div class={styles.headerRow}>
@@ -101,7 +153,17 @@ export function SettingsPanel({
                 class={styles.presetBtn}
                 data-active={isActive ? 'true' : 'false'}
                 key={p.id}
-                onClick={() => setCategories(applyCategoryPreset(categories, new Set(p.enabledIds)))}
+                onClick={() =>
+                  setCategories(
+                    applyCategoryPreset(
+                      categories,
+                      new Set(p.enabledIds),
+                      p.enabledWeights != null || p.enabledWeight != null
+                        ? { enabledWeights: p.enabledWeights, enabledWeight: p.enabledWeight }
+                        : undefined,
+                    ),
+                  )
+                }
               >
                 {p.label}
               </button>
@@ -110,39 +172,16 @@ export function SettingsPanel({
         </div>
       </div>
 
-      <div class={styles.subTitle}>Categories (z-score)</div>
-      <div class={styles.cats}>
-        {categories.map((c) => (
-          <div class={styles.catRow} key={c.id}>
-            <label class={styles.catCheck}>
-              <input
-                type="checkbox"
-                checked={c.enabled}
-                onChange={(e) => {
-                  const enabled = (e.currentTarget as HTMLInputElement).checked
-                  setCategories(categories.map((x) => (x.id === c.id ? { ...x, enabled } : x)))
-                }}
-              />
-              <span class={styles.catLabel}>
-                {c.label}
-                <span class={styles.catDir}>{c.direction === 'lower' ? ' (lower is better)' : ''}</span>
-              </span>
-            </label>
+      <div class={styles.subTitle}>스탯 카테고리 선택</div>
 
-            <input
-              class={styles.weight}
-              type="number"
-              step={0.05}
-              value={c.weight}
-              onInput={(e) => {
-                const weight = (e.currentTarget as HTMLInputElement).valueAsNumber
-                setCategories(categories.map((x) => (x.id === c.id ? { ...x, weight } : x)))
-              }}
-              disabled={!c.enabled}
-              aria-label={`${c.label} weight`}
-            />
-          </div>
-        ))}
+      <div class={styles.catSection}>
+        <div class={styles.catSectionTitle}>판타지 리그 반영 지표</div>
+        <div class={styles.cats}>{fantasyCats.map(renderCatRow)}</div>
+      </div>
+
+      <div class={styles.catSection}>
+        <div class={styles.catSectionTitle}>세부 지표</div>
+        <div class={styles.cats}>{detailCats.map(renderCatRow)}</div>
       </div>
 
       <div class={styles.hr} />

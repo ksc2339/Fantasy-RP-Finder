@@ -43,14 +43,14 @@
 .headerLeft {
   display: grid;
   grid-template-columns: 60px 1fr;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: 12px;
   align-items: center;
   min-width: 0;
 }
 
 .headshot {
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   width: 60px;
   height: 60px;
   border-radius: 14px;
@@ -73,6 +73,13 @@
   margin-top: 4px;
   font-size: 12px;
   color: color-mix(in oklab, var(--text) 85%, transparent);
+}
+
+.rrLine {
+  margin-top: 2px;
+  font-size: 11px;
+  color: color-mix(in oklab, var(--text) 72%, transparent);
+  line-height: 1.35;
 }
 
 .close {

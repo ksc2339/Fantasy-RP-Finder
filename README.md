@@ -1,4 +1,4 @@
-# Bullpen RP (Fantasy Baseball)
+# 판타지 베이스볼 불펜 구하기
 
 GitHub Pages에서 **링크만 열면 동작**하는 정적 웹앱입니다. 브라우저에서 **MLB Stats API**를 직접 호출해 불펜 투수(릴리버) 시즌 스탯을 가져오고, **사용자 정의 카테고리/가중치 기반 RP(z-score)**를 계산해 랭킹을 보여줍니다.
 
@@ -28,6 +28,8 @@ npm run build
 npm run preview
 ```
 
+로컬에서 보직 JSON만 다시 받으려면: `npm run data:roster-resource` (출력은 `web/public/data/`, git에 커밋하지 않음)
+
 ## 배포(GitHub Pages)
 
 - `main` 브랜치에 푸시하면 GitHub Actions가 `web/`을 빌드해서 Pages에 배포합니다.
@@ -43,6 +45,7 @@ npm run preview
 
 - **Data source**: MLB Stats API (클라이언트에서 직접 호출)
 - **FanGraphs**(xFIP 등): 빌드 시 스크랩 JSON으로만 연동합니다.
+- **FanGraphs Roster Resource**(보직: CL, SP1, MID 등): CI에서 30팀 깊이표를 스크랩해 `roster_resource_roles.json` 생성 후 빌드에 포함합니다.
 - **Baseball Savant**(Whiff%, xERA, xFIP): 빌드 시 파일로 제공됩니다.
 
 ## 브라우저 캐시(하루 1회)
