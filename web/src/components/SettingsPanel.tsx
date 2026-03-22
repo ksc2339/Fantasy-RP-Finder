@@ -141,7 +141,7 @@ export function SettingsPanel({
       <div class={styles.hr} />
 
       <div class={styles.presetRow}>
-        <div class={styles.presetLabel}>Preset</div>
+        <div class={styles.presetLabel}>리그 설정</div>
         <div class={styles.presetBtns}>
           {CATEGORY_PRESETS.map((p) => {
             const enabledIds = new Set(categories.filter((c) => c.enabled && c.weight !== 0).map((c) => c.id))
