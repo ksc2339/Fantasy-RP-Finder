@@ -180,7 +180,7 @@ export function DepthChartsPage({ refreshKey = 0 }: Props) {
               return (
                 <details key={slug} class={styles.teamCard}>
                   <summary>
-                    <span>{depthTeamTitle(slug)}</span>
+                    <span class={styles.teamTitle}>{depthTeamTitle(slug)}</span>
                     <span class={styles.count}>{pitchers.length}명</span>
                   </summary>
                   <div class={styles.tableWrap}>

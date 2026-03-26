@@ -80,11 +80,18 @@
   font-weight: 650;
   font-size: 14px;
   color: var(--text-h);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   user-select: none;
+}
+
+.teamTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .teamCard summary::-webkit-details-marker {
@@ -110,6 +117,10 @@
   font-size: 12px;
   font-weight: 500;
   color: color-mix(in oklab, var(--text) 70%, transparent);
+  min-width: 3.25em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  justify-self: end;
 }
 
 .tableWrap {
