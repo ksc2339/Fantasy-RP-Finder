@@ -96,13 +96,31 @@ function parseSavantPitcherCsv(csv) {
   return players
 }
 
+const MIN_SEASON = 2023
+
 async function main() {
   const y = new Date().getUTCFullYear()
   const seasons = []
-  for (let i = 0; i < 8; i++) seasons.push(y - i)
+  for (let i = 0; i < 8; i++) {
+    const s = y - i
+    if (s >= MIN_SEASON) seasons.push(s)
+  }
 
   const outDir = path.join(process.cwd(), 'public', 'data')
   await fs.mkdir(outDir, { recursive: true })
+
+  try {
+    const files = await fs.readdir(outDir)
+    for (const f of files) {
+      const m = /^savant_pitcher_(\d{4})\.json$/.exec(f)
+      if (m && Number(m[1]) < MIN_SEASON) {
+        await fs.unlink(path.join(outDir, f))
+        console.log(`removed legacy ${f}`)
+      }
+    }
+  } catch {
+    // ignore
+  }
 
   for (const season of seasons) {
     const url = buildUrl(season)

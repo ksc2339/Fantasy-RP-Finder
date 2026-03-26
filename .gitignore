@@ -7,7 +7,9 @@ web/node_modules/
 web/dist/
 web/dist-ssr/
 web/.vite/
-web/public/data/
+# Generated JSON (Savant/FG 등은 로컬·CI에서 생성). OOPSY만 리포에 포함해 클론 후 바로 프로젝션 로드 가능.
+web/public/data/*
+!web/public/data/oopsy_pitcher_*.json
 
 # One-off FanGraphs / RR probes (not shipped)
 web/scripts/probe-*.mjs

@@ -43,6 +43,7 @@ npm run preview
 
 ## 데이터 출처 / 한계
 
+- **지원 시즌**: **2023년 이상** (그 이전 시즌·정적 JSON은 사용하지 않습니다.)
 - **Data source**: MLB Stats API (클라이언트에서 직접 호출)
 - **FanGraphs**(xFIP 등): 빌드 시 스크랩 JSON으로만 연동합니다.
 - **FanGraphs Roster Resource**(보직: CL, SP1, MID 등): CI에서 30팀 깊이표를 스크랩해 `roster_resource_roles.json` 생성 후 빌드에 포함합니다.

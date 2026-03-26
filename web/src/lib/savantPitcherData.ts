@@ -1,3 +1,5 @@
+import { MIN_SUPPORTED_SEASON } from './seasonPolicy'
+
 export type SavantPitcherMetrics = {
   whiffPct: number | null
   xera: number | null
@@ -78,6 +80,7 @@ export function clearDataCaches() {
       k.startsWith('bullpen-rp:mlbPerson:') ||
       k.startsWith('bullpen-rp:mlbFullNameById:') ||
       k.startsWith('bullpen-rp:fangraphsXfip:') ||
+      k.startsWith('bullpen-rp:oopsyPitcher:') ||
       k.startsWith('bullpen-rp:rosterResource:') ||
       k.startsWith('bullpen-rp:whiffDaily:') ||
       k.startsWith('bullpen-rp:savantDaily:') ||
@@ -94,6 +97,15 @@ export async function getSavantPitcherMetrics(
   playerId: number,
   signal?: AbortSignal,
 ): Promise<{ metrics: SavantPitcherMetrics; fetchedAt: string; ok: boolean; error?: string }> {
+  const empty = { whiffPct: null, xera: null, xfip: null } satisfies SavantPitcherMetrics
+  if (season < MIN_SUPPORTED_SEASON) {
+    return {
+      metrics: empty,
+      fetchedAt: new Date().toISOString(),
+      ok: false,
+      error: `Savant 데이터는 ${MIN_SUPPORTED_SEASON}시즌 이상만 제공합니다.`,
+    }
+  }
   const todayLA = getLosAngelesDayStamp()
   const hit = readCache(season, todayLA)
   if (hit) {
@@ -102,7 +114,6 @@ export async function getSavantPitcherMetrics(
   }
 
   // Day changed: don't delete old cached payload yet. If refresh fails, we keep using it.
-  const empty = { whiffPct: null, xera: null, xfip: null } satisfies SavantPitcherMetrics
   const fallback = readCacheAny(season)
   const fallbackMetrics = fallback?.byPlayerId[String(playerId)] ?? empty
 
@@ -150,6 +161,14 @@ export async function getSavantPitcherMetricsMap(
   ok: boolean
   error?: string
 }> {
+  if (season < MIN_SUPPORTED_SEASON) {
+    return {
+      byPlayerId: {},
+      fetchedAt: new Date().toISOString(),
+      ok: false,
+      error: `Savant 데이터는 ${MIN_SUPPORTED_SEASON}시즌 이상만 제공합니다.`,
+    }
+  }
   const todayLA = getLosAngelesDayStamp()
   const hit = readCache(season, todayLA)
   if (hit) {

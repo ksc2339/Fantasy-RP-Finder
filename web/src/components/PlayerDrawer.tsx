@@ -5,12 +5,14 @@ import { getSavantPitcherMetrics } from '../lib/savantPitcherData'
 import { fetchPlayerPitchHandAndAge } from '../lib/mlbApi'
 import { formatInningsPitched } from '../lib/inningsFormat'
 import { fmtRrResourceType } from '../lib/rrTypeLabel'
+import type { OopsyPitcherFields } from '../lib/types'
 import styles from './PlayerDrawer.module.css'
 
 type Props = {
   row: PlayerRpRow | null
   onClose: () => void
   rpMeta: RpMeta
+  oopsyByPlayerId: Record<string, OopsyPitcherFields> | null
 }
 
 function fmt(n: number | null, digits = 3) {
@@ -41,7 +43,59 @@ function fmtPitchHand(code: string | null) {
   return code
 }
 
-export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
+function fmtOopsyExtra(
+  v: number | null | undefined,
+  kind: 'pct' | 'dec2' | 'dec3' | 'int' | 'dec1',
+): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  if (kind === 'pct') {
+    const pct = v > 1.5 ? v : v * 100
+    return `${pct.toFixed(1)}%`
+  }
+  if (kind === 'dec3') return v.toFixed(3)
+  if (kind === 'dec2') return v.toFixed(2)
+  if (kind === 'dec1') return v.toFixed(1)
+  return String(Math.round(v))
+}
+
+function pickOopsyK9(o: OopsyPitcherFields | null | undefined): number | undefined {
+  const v = o?.k9 ?? o?.K9
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+function pickOopsyBb9(o: OopsyPitcherFields | null | undefined): number | undefined {
+  const v = o?.bb9 ?? o?.BB9
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+function pickOopsyHr9(o: OopsyPitcherFields | null | undefined): number | undefined {
+  const v = o?.hr9 ?? o?.HR9
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+const OOPSY_EXTRA_PILLS: { k: keyof OopsyPitcherFields; label: string; kind: Parameters<typeof fmtOopsyExtra>[1] }[] = [
+  { k: 'WAR', label: 'WAR', kind: 'dec2' },
+  { k: 'ra9War', label: 'RA9-WAR', kind: 'dec2' },
+  { k: 'TBF', label: 'TBF', kind: 'int' },
+  { k: 'G', label: 'G', kind: 'int' },
+  { k: 'R', label: 'R', kind: 'int' },
+  { k: 'hr9', label: 'HR/9', kind: 'dec2' },
+  { k: 'HBP', label: 'HBP', kind: 'int' },
+  { k: 'BS', label: 'BS', kind: 'int' },
+  { k: 'IBB', label: 'IBB', kind: 'int' },
+  { k: 'kbb', label: 'K/BB', kind: 'dec2' },
+  { k: 'kPct', label: 'K%', kind: 'pct' },
+  { k: 'bbPct', label: 'BB%', kind: 'pct' },
+  { k: 'gbPct', label: 'GB%', kind: 'pct' },
+  { k: 'kbbPct', label: 'K-BB%', kind: 'pct' },
+  { k: 'avg', label: 'AVG', kind: 'dec3' },
+  { k: 'lobPct', label: 'LOB%', kind: 'pct' },
+  { k: 'FPTS', label: 'FPTS', kind: 'dec1' },
+  { k: 'fptsIp', label: 'FPTS/IP', kind: 'dec2' },
+  { k: 'SPTS', label: 'SPTS', kind: 'dec1' },
+  { k: 'sptsIp', label: 'SPTS/IP', kind: 'dec2' },
+  { k: 'ADP', label: 'ADP', kind: 'dec1' },
+]
+
+export function PlayerDrawer({ row, onClose, rpMeta, oopsyByPlayerId }: Props) {
   const open = !!row
   const enabled = rpMeta.cats.filter((c) => c.enabled)
   const filmRoomQuery = encodeURIComponent(row?.name ?? '').replace(/%20/g, '+')
@@ -102,6 +156,8 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
   const throwsText =
     personStatus === 'loading' && pitchHandToShow == null ? '…' : fmtPitchHand(pitchHandToShow)
 
+  const oopsy = row ? oopsyByPlayerId?.[String(row.playerId)] : null
+
   return (
     <div class={styles.backdrop} data-open={open ? 'true' : 'false'} onClick={onClose}>
       <aside class={styles.drawer} onClick={(e) => e.stopPropagation()} aria-hidden={!open}>
@@ -148,7 +204,9 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                 <div class={styles.rpValue}>{fmt(row.rp, 4)}</div>
               </div>
               <div class={styles.filters}>
-                Season: {rpMeta.cfg.season} • Min IP: {rpMeta.cfg.minIP} • Max Starts: {rpMeta.cfg.maxStarts}
+                Season: {rpMeta.cfg.season}
+                {rpMeta.cfg.useProjection ? ' (Proj)' : ''} • Min IP: {rpMeta.cfg.minIP} • Max Starts:{' '}
+                {rpMeta.cfg.maxStarts}
                 <span> • Age: {ageText} • Throws: {throwsText}</span>
               </div>
             </div>
@@ -179,7 +237,7 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                   <tr>
                     <th>Cat</th>
                     <th class={styles.num}>Value</th>
-                    <th class={styles.num}>z</th>
+                    <th class={styles.num}>Pctl (0–1)</th>
                     <th class={styles.num}>weight</th>
                     <th class={styles.num}>contrib</th>
                   </tr>
@@ -268,6 +326,74 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                 </div>
               ))}
             </div>
+
+            {rpMeta.cfg.useProjection && row.oopsyProjection ? (
+              <>
+                <div class={styles.sectionTitle}>프로젝션 추가 (FanGraphs OOPSY)</div>
+                <div class={styles.pills}>
+                  {OOPSY_EXTRA_PILLS.map(({ k, label, kind }) => {
+                    const v = row.oopsyProjection![k]
+                    if (v == null || typeof v !== 'number' || !Number.isFinite(v)) return null
+                    return (
+                      <div class={styles.pill} key={label}>
+                        <div class={styles.pillK}>{label}</div>
+                        <div class={styles.pillV}>{fmtOopsyExtra(v, kind)}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            ) : null}
+
+            {!rpMeta.cfg.useProjection ? (
+              <>
+                <div class={styles.sectionTitle}>OOPSY projections (FanGraphs)</div>
+                <div class={styles.pills}>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>IP</div>
+                    <div class={styles.pillV}>{oopsy?.IP == null ? '—' : formatInningsPitched(oopsy.IP)}</div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>ERA</div>
+                    <div class={styles.pillV}>{oopsy?.ERA == null ? '—' : oopsy.ERA.toFixed(2)}</div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>WHIP</div>
+                    <div class={styles.pillV}>{oopsy?.WHIP == null ? '—' : oopsy.WHIP.toFixed(2)}</div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>SO</div>
+                    <div class={styles.pillV}>{oopsy?.SO == null ? '—' : String(Math.round(oopsy.SO))}</div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>K/9</div>
+                    <div class={styles.pillV}>
+                      {pickOopsyK9(oopsy) == null ? '—' : pickOopsyK9(oopsy)!.toFixed(2)}
+                    </div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>BB/9</div>
+                    <div class={styles.pillV}>
+                      {pickOopsyBb9(oopsy) == null ? '—' : pickOopsyBb9(oopsy)!.toFixed(2)}
+                    </div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>HR/9</div>
+                    <div class={styles.pillV}>
+                      {pickOopsyHr9(oopsy) == null ? '—' : pickOopsyHr9(oopsy)!.toFixed(2)}
+                    </div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>FIP</div>
+                    <div class={styles.pillV}>{oopsy?.FIP == null ? '—' : oopsy.FIP.toFixed(2)}</div>
+                  </div>
+                  <div class={styles.pill}>
+                    <div class={styles.pillK}>WAR</div>
+                    <div class={styles.pillV}>{oopsy?.WAR == null ? '—' : oopsy.WAR.toFixed(1)}</div>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </>
         )}
       </aside>

@@ -1,4 +1,5 @@
 import type { MlbPitchingSplit, SeasonPitchingResponse } from './types'
+import { MIN_SUPPORTED_SEASON } from './seasonPolicy'
 
 type FetchSeasonPitchingStatsArgs = {
   season: number
@@ -77,7 +78,10 @@ export async function fetchSeasonPitchingStats({
   season,
   signal,
 }: FetchSeasonPitchingStatsArgs): Promise<SeasonPitchingResponse> {
-  pruneLegacyCaches()
+  if (season < MIN_SUPPORTED_SEASON) {
+    throw new Error(`지원 시즌은 ${MIN_SUPPORTED_SEASON}년 이상입니다.`)
+  }
+    pruneLegacyCaches()
   const key = `${LS_PREFIX}:${season}`
   const todayLA = getLosAngelesDayStamp()
   const cached = localStorage.getItem(key)

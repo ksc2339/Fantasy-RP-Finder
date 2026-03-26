@@ -65,6 +65,11 @@ jobs:
         working-directory: web
         run: node scripts/generate-fangraphs-xfip-data.mjs
 
+      - name: Prefetch FanGraphs OOPSY projections (pitchers)
+        if: steps.midnight.outputs.should_run == 'true'
+        working-directory: web
+        run: node scripts/generate-oopsy-projections.mjs
+
       - name: Prefetch Roster Resource roles (depth charts)
         if: steps.midnight.outputs.should_run == 'true'
         working-directory: web

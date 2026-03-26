@@ -141,6 +141,27 @@
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-bg) 90%, transparent);
 }
 
+/* Pill dropdown — 시즌 선택 (네이티브 select + 커스텀 화살표) */
+.seasonSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  /* size/radius/colors come from `.input` to match other fields */
+  padding-right: 2.25rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.25L6 7.75L9.5 4.25' stroke='%236366f1' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
+}
+
+/* focus/hover visuals come from `.input` */
+
+@media (prefers-color-scheme: dark) {
+  .seasonSelect {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.25L6 7.75L9.5 4.25' stroke='%23c4b5fd' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+
 .hr {
   height: 1px;
   background: var(--border);

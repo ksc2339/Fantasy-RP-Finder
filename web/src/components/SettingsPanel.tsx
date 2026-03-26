@@ -5,6 +5,8 @@ import {
   DEFAULT_CATEGORIES,
   DEFAULT_RP_CONFIG,
   FANTASY_LEAGUE_CATEGORY_ORDER,
+  MIN_SUPPORTED_SEASON,
+  PROJECTION_SEASON,
   applyCategoryPreset,
 } from '../lib/rp'
 import { clearDataCaches } from '../lib/savantPitcherData'
@@ -28,6 +30,26 @@ export function SettingsPanel({
   lastUpdated,
 }: Props) {
   const fantasyIdSet = useMemo(() => new Set<CategoryId>(FANTASY_LEAGUE_CATEGORY_ORDER), [])
+
+  const seasonSelectItems = useMemo(() => {
+    const y = new Date().getFullYear()
+    const max = Math.max(y, cfg.season, PROJECTION_SEASON)
+    const out: { value: string; label: string }[] = []
+    for (let s = MIN_SUPPORTED_SEASON; s <= max; s++) {
+      if (s === PROJECTION_SEASON) {
+        out.push({ value: String(s), label: String(s) })
+        out.push({ value: `${s}-proj`, label: `${s} (Proj)` })
+      } else {
+        out.push({ value: String(s), label: String(s) })
+      }
+    }
+    return out
+  }, [cfg.season])
+
+  const seasonSelectValue =
+    cfg.season === PROJECTION_SEASON && cfg.useProjection
+      ? `${PROJECTION_SEASON}-proj`
+      : String(cfg.season)
 
   const { fantasyCats, detailCats } = useMemo(() => {
     const byId = new Map(categories.map((c) => [c.id, c]))
@@ -91,14 +113,26 @@ export function SettingsPanel({
       <div class={styles.grid}>
         <label class={styles.field}>
           <div class={styles.label}>Season</div>
-          <input
-            class={styles.input}
-            type="number"
-            min={2000}
-            max={2100}
-            value={cfg.season}
-            onInput={(e) => setCfg({ ...cfg, season: (e.currentTarget as HTMLInputElement).valueAsNumber })}
-          />
+          <select
+            class={`${styles.input} ${styles.seasonSelect}`}
+            value={seasonSelectValue}
+            onChange={(e) => {
+              const v = (e.currentTarget as HTMLSelectElement).value
+              if (v.endsWith('-proj')) {
+                const season = Number(v.replace(/-proj$/, ''))
+                setCfg({ ...cfg, season, useProjection: true })
+              } else {
+                setCfg({ ...cfg, season: Number(v), useProjection: false })
+              }
+            }}
+            aria-label="Season"
+          >
+            {seasonSelectItems.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label class={styles.field}>

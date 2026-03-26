@@ -1,14 +1,27 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
-import { fetchSeasonPitchingStats } from '../lib/mlbApi'
+import { fetchMlbFullNamesByPlayerIds, fetchSeasonPitchingStats } from '../lib/mlbApi'
 import { getSavantPitcherMetricsMap, type SavantPitcherMetrics } from '../lib/savantPitcherData'
 import { getFangraphsXfipMap, type FangraphsPitcherFields } from '../lib/fangraphsXfipData'
+import {
+  getOopsyPitcherMap,
+  mergeOopsyIntoStats,
+  type OopsyPitcherFields,
+} from '../lib/oopsyProjectionsData'
 import {
   getRosterResourceRolesMap,
   mergeRpRowWithDepthSnapshot,
   type RosterResourceRolesRes,
 } from '../lib/rosterResourceRoles'
-import type { CategoryConfig, PlayerRpRow, RpConfig } from '../lib/types'
-import { DEFAULT_CATEGORIES, DEFAULT_RP_CONFIG, buildRows, computeRp } from '../lib/rp'
+import type { CategoryConfig, PlayerRow, PlayerRpRow, RpConfig } from '../lib/types'
+import {
+  DEFAULT_CATEGORIES,
+  DEFAULT_RP_CONFIG,
+  MIN_SUPPORTED_SEASON,
+  PROJECTION_SEASON,
+  buildOopsySupplementPlayerRows,
+  buildRows,
+  computeRp,
+} from '../lib/rp'
 import { SettingsPanel } from '../components/SettingsPanel'
 import { RankTable } from '../components/RankTable'
 import { PlayerDrawer } from '../components/PlayerDrawer'
@@ -49,7 +62,7 @@ function AppNav({ route }: { route: string }) {
         class={route.startsWith('/depth') ? styles.navActive : styles.navLink}
         aria-current={route.startsWith('/depth') ? 'page' : undefined}
       >
-        30팀 뎁스
+        팀별 뎁스 차트
       </a>
     </nav>
   )
@@ -69,7 +82,16 @@ export function App() {
     const saved = localStorage.getItem(CACHE_KEY)
     if (!saved) return DEFAULT_RP_CONFIG
     try {
-      return { ...DEFAULT_RP_CONFIG, ...(JSON.parse(saved) as Partial<RpConfig>) }
+      const p = { ...DEFAULT_RP_CONFIG, ...(JSON.parse(saved) as Partial<RpConfig>) }
+      const season = typeof p.season === 'number' ? p.season : DEFAULT_RP_CONFIG.season
+      const useProjection =
+        typeof p.useProjection === 'boolean' ? p.useProjection : DEFAULT_RP_CONFIG.useProjection
+      const s = Math.max(MIN_SUPPORTED_SEASON, Math.min(2100, season))
+      return {
+        ...p,
+        season: s,
+        useProjection: s === PROJECTION_SEASON ? useProjection : false,
+      }
     } catch {
       return DEFAULT_RP_CONFIG
     }
@@ -79,6 +101,9 @@ export function App() {
   const [raw, setRaw] = useState<Awaited<ReturnType<typeof fetchSeasonPitchingStats>> | null>(null)
   const [savantByPlayerId, setSavantByPlayerId] = useState<Record<string, SavantPitcherMetrics> | null>(null)
   const [fangraphsByPlayerId, setFangraphsByPlayerId] = useState<Record<string, FangraphsPitcherFields> | null>(null)
+  const [oopsyByPlayerId, setOopsyByPlayerId] = useState<Record<string, OopsyPitcherFields> | null>(null)
+  /** MLB 스플릿에 없고 OOPSY에만 있는 투수(2026 Proj). */
+  const [supplementRows, setSupplementRows] = useState<PlayerRow[]>([])
   const [rosterResource, setRosterResource] = useState<RosterResourceRolesRes | null>(null)
   const [selected, setSelected] = useState<PlayerRpRow | null>(null)
   /** 일 캐시를 건너뛰고 MLB·정적 JSON·Savant·FG를 다시 받기 위한 키 */
@@ -94,6 +119,8 @@ export function App() {
       setState({ status: 'loading' })
       setSavantByPlayerId(null)
       setFangraphsByPlayerId(null)
+      setOopsyByPlayerId(null)
+      setSupplementRows([])
       setRosterResource(null)
       try {
         const res = await fetchSeasonPitchingStats({ season: cfg.season })
@@ -120,6 +147,42 @@ export function App() {
           setFangraphsByPlayerId(null)
         }
 
+        let supplement: PlayerRow[] = []
+        // FanGraphs OOPSY projections are scraped at deploy time.
+        try {
+          const oopsyRes = await getOopsyPitcherMap(cfg.season)
+          if (cancelled) return
+          setOopsyByPlayerId(oopsyRes.byPlayerId)
+          if (
+            cfg.useProjection &&
+            cfg.season === PROJECTION_SEASON &&
+            oopsyRes.byPlayerId &&
+            Object.keys(oopsyRes.byPlayerId).length > 0
+          ) {
+            const baseIds = new Set(buildRows(res.splits).map((r) => r.playerId))
+            const missing = Object.keys(oopsyRes.byPlayerId).filter((id) => {
+              if (baseIds.has(Number(id))) return false
+              const o = oopsyRes.byPlayerId[id]
+              return o != null && (o.IP != null || o.ERA != null || o.SO != null)
+            })
+            if (missing.length > 0) {
+              const names = await fetchMlbFullNamesByPlayerIds(missing)
+              if (cancelled) return
+              supplement = buildOopsySupplementPlayerRows(
+                missing,
+                names,
+                oopsyRes.byPlayerId,
+                cfg.season,
+              )
+            }
+          }
+        } catch {
+          if (cancelled) return
+          setOopsyByPlayerId(null)
+        }
+        if (cancelled) return
+        setSupplementRows(supplement)
+
         try {
           const rrRes = await getRosterResourceRolesMap()
           if (cancelled) return
@@ -139,7 +202,7 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [cfg.season, dataRefreshKey])
+  }, [cfg.season, cfg.useProjection, dataRefreshKey])
 
   function handleForceDataRefresh() {
     clearDataCaches()
@@ -149,18 +212,23 @@ export function App() {
   const rows = useMemo(() => {
     if (!raw) return []
     const base = buildRows(raw.splits)
+    const combined = [...base, ...supplementRows]
     const rrOk = rosterResource?.ok === true
     const byId = rrOk ? rosterResource.byPlayerId : {}
     const depth = rrOk ? rosterResource.depthByTeam : null
 
-    return base.map((r) => {
+    const mergeOopsy =
+      cfg.season === PROJECTION_SEASON && cfg.useProjection && oopsyByPlayerId != null
+
+    return combined.map((r) => {
       let r2 = mergeRpRowWithDepthSnapshot(r, byId, depth)
 
       const m = savantByPlayerId ? savantByPlayerId[String(r.playerId)] : undefined
       const f = fangraphsByPlayerId ? fangraphsByPlayerId[String(r.playerId)] : undefined
-      if (!m && !f) return r2
+      // 2026 (Proj): Savant/FG 없어도 OOPSY로 랭킹 스탯을 채운다(2026 실시즌과 분리).
+      if (!m && !f && !mergeOopsy) return r2
 
-      const nextStats = { ...r2.stats }
+      let nextStats = { ...r2.stats }
       if (m) {
         nextStats.WHIFF = m.whiffPct
         nextStats.XERA = m.xera
@@ -175,12 +243,31 @@ export function App() {
       } else {
         nextStats.XFIP = m?.xfip ?? null
       }
+      let oopsyGs: number | null | undefined = r2.oopsyGs
+      let oopsyProjection = r2.oopsyProjection
+      if (mergeOopsy) {
+        const o = oopsyByPlayerId?.[String(r.playerId)]
+        nextStats = mergeOopsyIntoStats(nextStats, o)
+        oopsyGs = o?.GS != null && Number.isFinite(o.GS) ? o.GS : null
+        oopsyProjection = o ?? null
+      }
       return {
         ...r2,
         stats: nextStats,
+        oopsyGs,
+        oopsyProjection,
       }
     })
-  }, [raw, savantByPlayerId, fangraphsByPlayerId, rosterResource])
+  }, [
+    raw,
+    supplementRows,
+    savantByPlayerId,
+    fangraphsByPlayerId,
+    rosterResource,
+    oopsyByPlayerId,
+    cfg.season,
+    cfg.useProjection,
+  ])
 
   const rp = useMemo(() => {
     return computeRp(rows, cfg, cats)
@@ -193,13 +280,18 @@ export function App() {
         type="button"
         onClick={handleForceDataRefresh}
         disabled={state.status === 'loading'}
-        aria-label="캐시를 비우고 스탯·보직·30팀 뎁스 JSON을 다시 불러오기"
+        aria-label="캐시를 비우고 스탯·보직·팀별 뎁스 차트 JSON을 다시 불러오기"
       >
         Fetch
       </button>
       <button
         class={styles.ghostButton}
-        onClick={() => exportRowsToCsv(rp.rows, `bullpen_rp_${cfg.season}.csv`)}
+        onClick={() =>
+          exportRowsToCsv(
+            rp.rows,
+            `bullpen_rp_${cfg.season}${cfg.useProjection ? '_proj' : ''}.csv`,
+          )
+        }
         disabled={rp.rows.length === 0}
       >
         Export CSV
@@ -221,7 +313,7 @@ export function App() {
               type="button"
               onClick={handleForceDataRefresh}
               disabled={state.status === 'loading'}
-              aria-label="캐시를 비우고 스탯·보직·30팀 뎁스 JSON을 다시 불러오기"
+              aria-label="캐시를 비우고 스탯·보직·팀별 뎁스 차트 JSON을 다시 불러오기"
             >
               Fetch
             </button>
@@ -275,7 +367,12 @@ export function App() {
         스탯 출처: MLB Stats API • FanGraphs • FanGraphs Roster Resource • Baseball Savant
       </footer>
 
-      <PlayerDrawer row={selected} onClose={() => setSelected(null)} rpMeta={rp.meta} />
+      <PlayerDrawer
+        row={selected}
+        onClose={() => setSelected(null)}
+        rpMeta={rp.meta}
+        oopsyByPlayerId={oopsyByPlayerId}
+      />
     </div>
   )
 }

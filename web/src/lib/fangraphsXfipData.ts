@@ -1,3 +1,5 @@
+import { MIN_SUPPORTED_SEASON } from './seasonPolicy'
+
 export type FangraphsXfipPayload = {
   season: number
   fetchedAt: string
@@ -44,6 +46,14 @@ export type FangraphsXfipMapRes = {
  * 같은 LA 날짜에는 localStorage로 하루 1회만 네트워크 fetch.
  */
 export async function getFangraphsXfipMap(season: number, signal?: AbortSignal): Promise<FangraphsXfipMapRes> {
+  if (season < MIN_SUPPORTED_SEASON) {
+    return {
+      byPlayerId: {},
+      fetchedAt: null,
+      ok: false,
+      error: `FanGraphs xFIP 데이터는 ${MIN_SUPPORTED_SEASON}시즌 이상만 제공합니다.`,
+    }
+  }
   const todayLA = dayStampLA()
   const k = key(season)
   const cached = localStorage.getItem(k)

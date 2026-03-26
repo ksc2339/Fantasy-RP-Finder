@@ -2,15 +2,22 @@ import type {
   CategoryConfig,
   CategoryId,
   MlbPitchingSplit,
+  OopsyPitcherFields,
   PlayerRow,
   PlayerRpRow,
   RpConfig,
   RpMeta,
 } from './types'
+import { MIN_SUPPORTED_SEASON, PROJECTION_SEASON } from './seasonPolicy'
+import { mergeOopsyIntoStats } from './oopsyProjectionsData'
+import { isRrRoleStartingPitcher } from './rrTypeLabel'
+
+export { MIN_SUPPORTED_SEASON, PROJECTION_SEASON }
 
 export const DEFAULT_RP_CONFIG: RpConfig = {
   // Default to last completed season to avoid empty early-season results.
-  season: new Date().getFullYear() - 1,
+  season: Math.max(MIN_SUPPORTED_SEASON, new Date().getFullYear() - 1),
+  useProjection: false,
   minIP: 10,
   maxStarts: 1,
   minGames: 5,
@@ -246,9 +253,49 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
   return out
 }
 
+/**
+ * MLB 시즌 스플릿에 없어도 OOPSY에만 있는 투수를 한 행으로 만듭니다(2026 Proj 등).
+ */
+export function buildOopsySupplementPlayerRows(
+  playerIds: string[],
+  namesById: Record<string, string>,
+  oopsyByPlayerId: Record<string, OopsyPitcherFields>,
+  seasonYear: number,
+): PlayerRow[] {
+  const out: PlayerRow[] = []
+  for (const id of playerIds) {
+    const o = oopsyByPlayerId[id]
+    if (!o) continue
+    if (o.IP == null && o.ERA == null && o.SO == null) continue
+    const pid = Number(id)
+    if (!Number.isFinite(pid)) continue
+    const name = (namesById[id]?.trim() || `Player ${id}`).trim()
+    const stub: MlbPitchingSplit = {
+      season: String(seasonYear),
+      player: { id: pid, fullName: name },
+      stat: {
+        gamesStarted: 0,
+        gamesPitched: 0,
+        gamesPlayed: 0,
+        inningsPitched: '0.0',
+      },
+    }
+    const built = buildRows([stub])
+    const row = built[0]
+    if (!row) continue
+    row.stats = mergeOopsyIntoStats(row.stats, o) as PlayerRow['stats']
+    row.oopsyGs = o.GS != null && Number.isFinite(o.GS) ? o.GS : null
+    row.oopsyProjection = o
+    out.push(row)
+  }
+  return out
+}
+
 function relieverFilter(rows: PlayerRow[], cfg: RpConfig) {
   const included: PlayerRow[] = []
   let excluded = 0
+  const proj = cfg.useProjection && cfg.season === PROJECTION_SEASON
+  const skipMinGames = proj
   for (const r of rows) {
     const displayName = typeof r.name === 'string' ? r.name.trim() : ''
     if (!displayName) {
@@ -262,11 +309,21 @@ function relieverFilter(rows: PlayerRow[], cfg: RpConfig) {
     const gs = num((r.raw.stat as any)?.gamesStarted) ?? 0
     const g = num((r.raw.stat as any)?.gamesPitched) ?? num((r.raw.stat as any)?.gamesPlayed) ?? 0
     const ip = r.stats.IP ?? 0
-    if (gs > cfg.maxStarts) {
+    const projGs = r.oopsyGs != null && Number.isFinite(r.oopsyGs) ? r.oopsyGs : 0
+    if (proj && isRrRoleStartingPitcher(r.rrRole)) {
       excluded++
       continue
     }
-    if (g < cfg.minGames) {
+    // OOPSY(Proj): 실제/프로젝션 GS≥1 또는 프로젝션 이닝 30 이하 제외
+    if (proj && (gs >= 1 || projGs >= 1 || ip <= 30)) {
+      excluded++
+      continue
+    }
+    if (!proj && gs > cfg.maxStarts) {
+      excluded++
+      continue
+    }
+    if (!skipMinGames && g < cfg.minGames) {
       excluded++
       continue
     }
@@ -289,13 +346,48 @@ function stdev(vals: number[], mu: number): number {
   return Math.sqrt(v)
 }
 
+/** 동률은 평균 순위. 값 오름차순 정렬 후 rank 0..n-1 → 0~1 백분위. */
+function percentileByPlayer(
+  included: PlayerRow[],
+  catId: CategoryId,
+  direction: 'higher' | 'lower',
+): Map<number, number> {
+  const pairs = included
+    .map((r) => ({ pid: r.playerId, v: r.stats[catId] }))
+    .filter((x): x is { pid: number; v: number } => typeof x.v === 'number' && Number.isFinite(x.v))
+  const n = pairs.length
+  if (n === 0) return new Map()
+  if (n === 1) return new Map([[pairs[0].pid, 0.5]])
+
+  pairs.sort((a, b) => a.v - b.v)
+  const ranks = new Array<number>(n).fill(0)
+  let j = 0
+  while (j < n) {
+    let k = j
+    while (k < n && pairs[k].v === pairs[j].v) k++
+    const avgRank = (j + k - 1) / 2
+    for (let t = j; t < k; t++) ranks[t] = avgRank
+    j = k
+  }
+
+  const out = new Map<number, number>()
+  const denom = n - 1
+  for (let i = 0; i < n; i++) {
+    const rank = ranks[i]
+    const pct = direction === 'higher' ? rank / denom : 1 - rank / denom
+    out.set(pairs[i].pid, pct)
+  }
+  return out
+}
+
 export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig[]) {
-  /** 체크된 카테고리 전부(가중치 0 포함): 표시·z-score용. 기여(contrib)·RP 합은 weight로 곱해져 0이 됨. */
+  /** 체크된 카테고리 전부(가중치 0 포함): 백분위(0~1)·기여(contrib)·RP 합. */
   const activeCats = cats.filter((c) => c.enabled)
   const { included, excluded } = relieverFilter(rows, cfg)
 
   const means: Partial<Record<CategoryId, number>> = {}
   const stdevs: Partial<Record<CategoryId, number>> = {}
+  const percentileByCat = new Map<CategoryId, Map<number, number>>()
 
   for (const c of activeCats) {
     const vals = included
@@ -305,6 +397,7 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
     const sd = stdev(vals, mu)
     means[c.id] = mu
     stdevs[c.id] = sd
+    percentileByCat.set(c.id, percentileByPlayer(included, c.id, c.direction))
   }
 
   const rpRows: PlayerRpRow[] = included.map((r) => {
@@ -369,16 +462,12 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
     let rp = 0
 
     for (const c of activeCats) {
-      const v = r.stats[c.id]
-      const mu = means[c.id]
-      const sd = stdevs[c.id]
-      if (v == null || mu == null || sd == null || sd === 0) continue
+      const pmap = percentileByCat.get(c.id)
+      const pct = pmap?.get(r.playerId)
+      if (pct == null) continue
 
-      const adj = c.direction === 'lower' ? -v : v
-      const adjMu = c.direction === 'lower' ? -mu : mu
-      const zi = (adj - adjMu) / sd
-      z[c.id] = zi
-      const ci = zi * c.weight
+      z[c.id] = pct
+      const ci = pct * c.weight
       contrib[c.id] = ci
       rp += ci
     }
