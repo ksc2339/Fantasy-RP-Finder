@@ -2,14 +2,27 @@ import { useEffect, useMemo, useState } from 'preact/hooks'
 import { fetchSeasonPitchingStats } from '../lib/mlbApi'
 import { getSavantPitcherMetricsMap, type SavantPitcherMetrics } from '../lib/savantPitcherData'
 import { getFangraphsXfipMap, type FangraphsPitcherFields } from '../lib/fangraphsXfipData'
-import { getRosterResourceRolesMap, type RosterResourcePitcherFields } from '../lib/rosterResourceRoles'
+import {
+  getRosterResourceRolesMap,
+  mergeRpRowWithDepthSnapshot,
+  type RosterResourceRolesRes,
+} from '../lib/rosterResourceRoles'
 import type { CategoryConfig, PlayerRpRow, RpConfig } from '../lib/types'
 import { DEFAULT_CATEGORIES, DEFAULT_RP_CONFIG, buildRows, computeRp } from '../lib/rp'
 import { SettingsPanel } from '../components/SettingsPanel'
 import { RankTable } from '../components/RankTable'
 import { PlayerDrawer } from '../components/PlayerDrawer'
+import { DepthChartsPage } from '../components/DepthChartsPage'
 import { exportRowsToCsv } from '../lib/export'
+import { clearDataCaches } from '../lib/savantPitcherData'
 import styles from './App.module.css'
+
+function readRoute(): string {
+  if (typeof window === 'undefined') return '/'
+  const h = window.location.hash.replace(/^#/, '')
+  if (!h || h === '/') return '/'
+  return h.startsWith('/') ? h : `/${h}`
+}
 
 type LoadState =
   | { status: 'idle' | 'loading' }
@@ -18,7 +31,40 @@ type LoadState =
 
 const CACHE_KEY = 'bullpen-rp:v1'
 
+function AppNav({ route }: { route: string }) {
+  return (
+    <nav class={styles.navRow} aria-label="페이지 이동">
+      <a
+        href="#/"
+        class={route === '/' ? styles.navActive : styles.navLink}
+        aria-current={route === '/' ? 'page' : undefined}
+      >
+        RP 랭킹
+      </a>
+      <span class={styles.navSep} aria-hidden>
+        ·
+      </span>
+      <a
+        href="#/depth"
+        class={route.startsWith('/depth') ? styles.navActive : styles.navLink}
+        aria-current={route.startsWith('/depth') ? 'page' : undefined}
+      >
+        30팀 뎁스
+      </a>
+    </nav>
+  )
+}
+
 export function App() {
+  const [route, setRoute] = useState<string>(() => readRoute())
+
+  useEffect(() => {
+    const onHash = () => setRoute(readRoute())
+    window.addEventListener('hashchange', onHash)
+    setRoute(readRoute())
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   const [cfg, setCfg] = useState<RpConfig>(() => {
     const saved = localStorage.getItem(CACHE_KEY)
     if (!saved) return DEFAULT_RP_CONFIG
@@ -33,10 +79,10 @@ export function App() {
   const [raw, setRaw] = useState<Awaited<ReturnType<typeof fetchSeasonPitchingStats>> | null>(null)
   const [savantByPlayerId, setSavantByPlayerId] = useState<Record<string, SavantPitcherMetrics> | null>(null)
   const [fangraphsByPlayerId, setFangraphsByPlayerId] = useState<Record<string, FangraphsPitcherFields> | null>(null)
-  const [rosterResourceByPlayerId, setRosterResourceByPlayerId] = useState<
-    Record<string, RosterResourcePitcherFields> | null
-  >(null)
+  const [rosterResource, setRosterResource] = useState<RosterResourceRolesRes | null>(null)
   const [selected, setSelected] = useState<PlayerRpRow | null>(null)
+  /** 일 캐시를 건너뛰고 MLB·정적 JSON·Savant·FG를 다시 받기 위한 키 */
+  const [dataRefreshKey, setDataRefreshKey] = useState(0)
 
   useEffect(() => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cfg))
@@ -48,7 +94,7 @@ export function App() {
       setState({ status: 'loading' })
       setSavantByPlayerId(null)
       setFangraphsByPlayerId(null)
-      setRosterResourceByPlayerId(null)
+      setRosterResource(null)
       try {
         const res = await fetchSeasonPitchingStats({ season: cfg.season })
         if (cancelled) return
@@ -77,10 +123,10 @@ export function App() {
         try {
           const rrRes = await getRosterResourceRolesMap()
           if (cancelled) return
-          setRosterResourceByPlayerId(rrRes.byPlayerId)
+          setRosterResource(rrRes)
         } catch {
           if (cancelled) return
-          setRosterResourceByPlayerId(null)
+          setRosterResource(null)
         }
 
         setState({ status: 'ready' })
@@ -93,21 +139,28 @@ export function App() {
     return () => {
       cancelled = true
     }
-  }, [cfg.season])
+  }, [cfg.season, dataRefreshKey])
+
+  function handleForceDataRefresh() {
+    clearDataCaches()
+    setDataRefreshKey((k) => k + 1)
+  }
 
   const rows = useMemo(() => {
     if (!raw) return []
     const base = buildRows(raw.splits)
-    if (!savantByPlayerId && !fangraphsByPlayerId && !rosterResourceByPlayerId) return base
+    const rrOk = rosterResource?.ok === true
+    const byId = rrOk ? rosterResource.byPlayerId : {}
+    const depth = rrOk ? rosterResource.depthByTeam : null
 
-    // Inject Savant values so they can be used as z-score categories.
     return base.map((r) => {
+      let r2 = mergeRpRowWithDepthSnapshot(r, byId, depth)
+
       const m = savantByPlayerId ? savantByPlayerId[String(r.playerId)] : undefined
       const f = fangraphsByPlayerId ? fangraphsByPlayerId[String(r.playerId)] : undefined
-      const rr = rosterResourceByPlayerId ? rosterResourceByPlayerId[String(r.playerId)] : undefined
-      if (!m && !f && !rr) return r
+      if (!m && !f) return r2
 
-      const nextStats = { ...r.stats }
+      const nextStats = { ...r2.stats }
       if (m) {
         nextStats.WHIFF = m.whiffPct
         nextStats.XERA = m.xera
@@ -123,25 +176,27 @@ export function App() {
         nextStats.XFIP = m?.xfip ?? null
       }
       return {
-        ...r,
+        ...r2,
         stats: nextStats,
-        ...(rr
-          ? {
-              rrRole: rr.rrRole,
-              rrType: rr.rrType,
-              rrPosition1: rr.position1,
-            }
-          : {}),
       }
     })
-  }, [raw, savantByPlayerId, fangraphsByPlayerId, rosterResourceByPlayerId])
+  }, [raw, savantByPlayerId, fangraphsByPlayerId, rosterResource])
 
   const rp = useMemo(() => {
     return computeRp(rows, cfg, cats)
   }, [rows, cfg, cats])
 
-  const headerRight = (
+  const headerRightRank = (
     <div class={styles.headerRight}>
+      <button
+        class={styles.ghostButton}
+        type="button"
+        onClick={handleForceDataRefresh}
+        disabled={state.status === 'loading'}
+        aria-label="캐시를 비우고 스탯·보직·30팀 뎁스 JSON을 다시 불러오기"
+      >
+        Fetch
+      </button>
       <button
         class={styles.ghostButton}
         onClick={() => exportRowsToCsv(rp.rows, `bullpen_rp_${cfg.season}.csv`)}
@@ -152,13 +207,39 @@ export function App() {
     </div>
   )
 
+  if (route.startsWith('/depth')) {
+    return (
+      <div class={styles.page}>
+        <header class={styles.header}>
+          <div>
+            <div class={styles.title}>판타지 베이스볼 불펜 구하기</div>
+            <AppNav route={route} />
+          </div>
+          <div class={styles.headerRight}>
+            <button
+              class={styles.ghostButton}
+              type="button"
+              onClick={handleForceDataRefresh}
+              disabled={state.status === 'loading'}
+              aria-label="캐시를 비우고 스탯·보직·30팀 뎁스 JSON을 다시 불러오기"
+            >
+              Fetch
+            </button>
+          </div>
+        </header>
+        <DepthChartsPage refreshKey={dataRefreshKey} />
+      </div>
+    )
+  }
+
   return (
     <div class={styles.page}>
       <header class={styles.header}>
         <div>
           <div class={styles.title}>판타지 베이스볼 불펜 구하기</div>
+          <AppNav route={route} />
         </div>
-        {headerRight}
+        {headerRightRank}
       </header>
 
       <main class={styles.main}>

@@ -41,7 +41,7 @@ export type FangraphsXfipMapRes = {
 
 /**
  * Loads a baked sparse xFIP map produced at deploy time.
- * Cached per LA day to avoid repeated fetches.
+ * 같은 LA 날짜에는 localStorage로 하루 1회만 네트워크 fetch.
  */
 export async function getFangraphsXfipMap(season: number, signal?: AbortSignal): Promise<FangraphsXfipMapRes> {
   const todayLA = dayStampLA()
@@ -61,7 +61,7 @@ export async function getFangraphsXfipMap(season: number, signal?: AbortSignal):
   const fileUrl = `./data/fangraphs_xfip_${season}.json`
   const fallback: FangraphsXfipMapRes = { byPlayerId: {}, fetchedAt: null, ok: false, error: 'missing file' }
   try {
-    const res = await fetch(fileUrl, { signal })
+    const res = await fetch(fileUrl, { signal, cache: 'no-store' })
     if (!res.ok) return fallback
     const payload = (await res.json()) as FangraphsXfipPayload
     if (!payload?.byPlayerId) return fallback

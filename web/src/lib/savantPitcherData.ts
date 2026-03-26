@@ -73,8 +73,10 @@ export function clearDataCaches() {
     if (!k) continue
     if (
       k.startsWith('bullpen-rp:mlbStats:') ||
+      k.startsWith('bullpen-rp:mlbTeamAbbr:') ||
       k.startsWith('bullpen-rp:savantPitcher:') ||
       k.startsWith('bullpen-rp:mlbPerson:') ||
+      k.startsWith('bullpen-rp:mlbFullNameById:') ||
       k.startsWith('bullpen-rp:fangraphsXfip:') ||
       k.startsWith('bullpen-rp:rosterResource:') ||
       k.startsWith('bullpen-rp:whiffDaily:') ||
@@ -106,7 +108,7 @@ export async function getSavantPitcherMetrics(
 
   const fetchedAt = new Date().toISOString()
   try {
-    const res = await fetch(`./data/savant_pitcher_${season}.json`, { signal })
+    const res = await fetch(`./data/savant_pitcher_${season}.json`, { signal, cache: 'no-store' })
     if (!res.ok) {
       return {
         metrics: fallbackMetrics,
@@ -160,7 +162,7 @@ export async function getSavantPitcherMetricsMap(
   const fallbackFetchedAt = fallback?.fetchedAt ?? new Date().toISOString()
 
   try {
-    const res = await fetch(`./data/savant_pitcher_${season}.json`, { signal })
+    const res = await fetch(`./data/savant_pitcher_${season}.json`, { signal, cache: 'no-store' })
     if (!res.ok) {
       return { byPlayerId: fallbackMetrics, fetchedAt: fallbackFetchedAt, ok: false, error: `HTTP ${res.status}` }
     }

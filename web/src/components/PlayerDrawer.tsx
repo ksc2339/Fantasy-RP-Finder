@@ -3,6 +3,8 @@ import { useEffect, useState } from 'preact/hooks'
 import { mlbHeadshotUrl } from '../lib/mlbImages'
 import { getSavantPitcherMetrics } from '../lib/savantPitcherData'
 import { fetchPlayerPitchHandAndAge } from '../lib/mlbApi'
+import { formatInningsPitched } from '../lib/inningsFormat'
+import { fmtRrResourceType } from '../lib/rrTypeLabel'
 import styles from './PlayerDrawer.module.css'
 
 type Props = {
@@ -20,7 +22,7 @@ function fmtStat(id: CategoryId, n: number | null) {
   if (n == null || !Number.isFinite(n)) return '—'
   if (id === 'ERA' || id === 'WHIP' || id === 'XERA' || id === 'XFIP' || id === 'FIP') return n.toFixed(2)
   if (id === 'BABIP') return n.toFixed(3)
-  if (id === 'IP') return n.toFixed(1)
+  if (id === 'IP') return formatInningsPitched(n)
   if (id === 'WHIFF') return n.toFixed(1)
   if (id === 'LOBP' || id === 'HRFB') {
     // FanGraphs LOB% / HR/FB may arrive as ratio or percent-style number.
@@ -39,17 +41,9 @@ function fmtPitchHand(code: string | null) {
   return code
 }
 
-function fmtRrType(t: string | null) {
-  if (!t) return ''
-  if (t === 'mlb-sp' || t === 'mlb-bp') return 'MLB'
-  if (t.startsWith('il-')) return 'IL'
-  if (t.startsWith('off-')) return 'Minors/대기'
-  return t
-}
-
 export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
   const open = !!row
-  const enabled = rpMeta.cats.filter((c) => c.enabled && c.weight !== 0)
+  const enabled = rpMeta.cats.filter((c) => c.enabled)
   const filmRoomQuery = encodeURIComponent(row?.name ?? '').replace(/%20/g, '+')
   const [savant, setSavant] = useState<{
     whiffPct: number | null
@@ -128,13 +122,18 @@ export function PlayerDrawer({ row, onClose, rpMeta }: Props) {
                   }}
                 />
                 <div class={styles.name}>{row.name}</div>
-                <div class={styles.team}>{row.team || '—'}</div>
+                <div class={styles.teamBlock}>
+                  <div class={styles.team}>{(row.teamCurrent ?? row.team) || '—'}</div>
+                  {row.teamCurrent != null && row.team && row.teamCurrent !== row.team ? (
+                    <div class={styles.teamSeasonNote}>시즌 스플릿: {row.team}</div>
+                  ) : null}
+                </div>
                 <div
                   class={styles.rrLine}
                   title="FanGraphs Roster Resource 깊이표 보직(스냅샷)"
                 >
                   보직: {row.rrRole ?? '—'}
-                  {row.rrType ? ` · ${fmtRrType(row.rrType)}` : ''}
+                  {row.rrType ? ` · ${fmtRrResourceType(row.rrType)}` : ''}
                   {row.rrPosition1 ? ` · ${row.rrPosition1}` : ''}
                 </div>
               </div>

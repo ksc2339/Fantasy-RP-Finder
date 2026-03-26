@@ -1,4 +1,5 @@
 import type { CategoryId, PlayerRpRow } from './types'
+import { formatInningsPitched } from './inningsFormat'
 
 function esc(x: string) {
   if (x.includes('"') || x.includes(',') || x.includes('\n')) return `"${x.replaceAll('"', '""')}"`
@@ -40,7 +41,9 @@ export function exportRowsToCsv(rows: PlayerRpRow[], filename: string) {
   const lines = rows.map((r, idx) => {
     const vals = COLS.map((c) => {
       const v = r.stats[c.key]
-      return v == null ? '' : String(v)
+      if (v == null) return ''
+      if (c.key === 'IP') return formatInningsPitched(v)
+      return String(v)
     })
     return [
       String(idx + 1),

@@ -144,7 +144,7 @@ export function SettingsPanel({
         <div class={styles.presetLabel}>리그 설정</div>
         <div class={styles.presetBtns}>
           {CATEGORY_PRESETS.map((p) => {
-            const enabledIds = new Set(categories.filter((c) => c.enabled && c.weight !== 0).map((c) => c.id))
+            const enabledIds = new Set(categories.filter((c) => c.enabled).map((c) => c.id))
             const isActive =
               p.enabledIds.length === enabledIds.size && p.enabledIds.every((id) => enabledIds.has(id))
             return (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import type { CategoryId, PlayerRpRow, RpMeta } from '../lib/types'
+import { formatInningsPitched } from '../lib/inningsFormat'
 import styles from './RankTable.module.css'
 
 type Props = {
@@ -22,7 +23,7 @@ function renderCategoryValue(id: CategoryId, n: number | null) {
   if (id === 'ERA' || id === 'WHIP' || id === 'XERA' || id === 'XFIP' || id === 'FIP') return n.toFixed(2)
   if (id === 'BABIP') return n.toFixed(3)
   if (id === 'WHIFF') return `${n.toFixed(1)}%`
-  if (id === 'IP') return n.toFixed(1)
+  if (id === 'IP') return formatInningsPitched(n)
   if (id === 'WPA') return n.toFixed(3)
   if (id === 'LOBP' || id === 'HRFB') {
     const pct = n > 1.5 ? n : n * 100
@@ -39,7 +40,7 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
   const [pageSize, setPageSize] = useState<10 | 30 | 100>(30)
   const [page, setPage] = useState(1)
 
-  const enabledCats = useMemo(() => meta.cats.filter((c) => c.enabled && c.weight !== 0), [meta.cats])
+  const enabledCats = useMemo(() => meta.cats.filter((c) => c.enabled), [meta.cats])
 
   const view = useMemo(() => {
     const query = q.trim().toLowerCase()

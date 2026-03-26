@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "data:roster-resource": "node scripts/generate-roster-resource-roles.mjs"
+    "data:roster-resource": "node scripts/generate-roster-resource-roles.mjs",
+    "data:roster-enrich-teams": "node scripts/enrich-roster-resource-teamslug.mjs"
   },
   "dependencies": {
     "preact": "^10.28.4"

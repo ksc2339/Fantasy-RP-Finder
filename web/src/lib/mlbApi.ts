@@ -43,6 +43,7 @@ async function getTeamIdToAbbreviation(signal?: AbortSignal): Promise<Map<number
   }
   const res = await fetch('https://statsapi.mlb.com/api/v1/teams?sportId=1&activeStatus=ACTIVE', {
     signal,
+    cache: 'no-store',
     headers: { Accept: 'application/json' },
   })
   if (!res.ok) return new Map()
@@ -89,7 +90,6 @@ export async function fetchSeasonPitchingStats({
         const splits = enrichSplitsWithTeamAbbreviation(parsed.splits, abbr)
         return { fetchedAt: parsed.fetchedAt, splits }
       }
-      // Day changed (Pacific): keep old cached payload as a fallback in case refresh fails.
       fallback = { fetchedAt: parsed?.fetchedAt, splits: parsed?.splits }
     } catch {
       // ignore corrupted cache
@@ -98,19 +98,24 @@ export async function fetchSeasonPitchingStats({
 
   const url = buildUrl(season)
   try {
-    const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
+    const res = await fetch(url, { signal, cache: 'no-store', headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`MLB Stats API error: ${res.status} ${res.statusText}`)
     const json = (await res.json()) as unknown
     const rawSplits = coerceSplits(json)
     const abbr = await getTeamIdToAbbreviation(signal)
     const splits = enrichSplitsWithTeamAbbreviation(rawSplits, abbr)
+    const todayLA = getLosAngelesDayStamp()
     const out: SeasonPitchingResponse & { cachedAt: number; cachedDay: string } = {
       fetchedAt: new Date().toISOString(),
       cachedAt: Date.now(),
       cachedDay: todayLA,
       splits,
     }
-    localStorage.setItem(key, JSON.stringify(out))
+    try {
+      localStorage.setItem(key, JSON.stringify(out))
+    } catch {
+      // quota — still return fresh splits
+    }
     return { fetchedAt: out.fetchedAt, splits: out.splits }
   } catch (e) {
     if (fallback?.splits?.length) {
@@ -147,6 +152,74 @@ function pruneLegacyCaches() {
 type FetchPlayerPersonArgs = {
   playerId: number
   signal?: AbortSignal
+}
+
+const LS_FULL_NAME_BY_ID = 'bullpen-rp:mlbFullNameById:v1'
+
+/**
+ * MLBAM ID 목록에 대해 `fullName`을 조회합니다. FanGraphs RR JSON에 이름이 비어 있을 때 뎁스 표에 쓰기 위함.
+ * 로컬 스토리지에 병합 캐시합니다.
+ */
+export async function fetchMlbFullNamesByPlayerIds(
+  ids: string[],
+  signal?: AbortSignal,
+): Promise<Record<string, string>> {
+  const unique = [...new Set(ids.filter((id) => typeof id === 'string' && /^\d+$/.test(id)))]
+  const out: Record<string, string> = {}
+  try {
+    const raw = localStorage.getItem(LS_FULL_NAME_BY_ID)
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, string>
+      if (parsed && typeof parsed === 'object') {
+        for (const id of unique) {
+          const n = parsed[id]
+          if (typeof n === 'string' && n.trim()) out[id] = n.trim()
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  const missing = unique.filter((id) => !out[id])
+  const CHUNK = 50
+  const PARALLEL = 6
+  const chunks: string[][] = []
+  for (let i = 0; i < missing.length; i += CHUNK) {
+    chunks.push(missing.slice(i, i + CHUNK))
+  }
+  for (let i = 0; i < chunks.length; i += PARALLEL) {
+    if (signal?.aborted) break
+    const group = chunks.slice(i, i + PARALLEL)
+    await Promise.all(
+      group.map(async (chunk) => {
+        const url = `https://statsapi.mlb.com/api/v1/people?personIds=${chunk.join(',')}`
+        try {
+          const res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
+          if (!res.ok) return
+          const json = (await res.json()) as { people?: { id?: number; fullName?: string }[] }
+          for (const p of json.people ?? []) {
+            const id = p.id != null ? String(p.id) : ''
+            if (id && typeof p.fullName === 'string' && p.fullName.trim()) {
+              out[id] = p.fullName.trim()
+            }
+          }
+        } catch {
+          // network / abort
+        }
+      }),
+    )
+  }
+
+  try {
+    const raw = localStorage.getItem(LS_FULL_NAME_BY_ID)
+    const merged = { ...(raw ? (JSON.parse(raw) as Record<string, string>) : {}), ...out }
+    localStorage.setItem(LS_FULL_NAME_BY_ID, JSON.stringify(merged))
+  } catch {
+    // quota
+  }
+
+  return out
 }
 
 export async function fetchPlayerPitchHandAndAge({

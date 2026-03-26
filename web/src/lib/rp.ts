@@ -24,14 +24,14 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'K', label: 'K', weight: 0.8, direction: 'higher', enabled: true },
   { id: 'ERA', label: 'ERA', weight: 1, direction: 'lower', enabled: true },
   { id: 'WHIP', label: 'WHIP', weight: 1, direction: 'lower', enabled: true },
-  { id: 'WHIFF', label: 'Whiff%', weight: 0.6, direction: 'higher', enabled: false },
-  { id: 'XERA', label: 'xERA', weight: 0.6, direction: 'lower', enabled: false },
-  { id: 'XFIP', label: 'xFIP', weight: 0.6, direction: 'lower', enabled: false },
-  { id: 'FIP', label: 'FIP', weight: 0.6, direction: 'lower', enabled: false },
-  { id: 'WPA', label: 'WPA', weight: 0.3, direction: 'higher', enabled: false },
-  { id: 'LOBP', label: 'LOB%', weight: 0.4, direction: 'higher', enabled: false },
-  { id: 'BABIP', label: 'BABIP', weight: 0.25, direction: 'lower', enabled: false },
-  { id: 'HRFB', label: 'HR/FB', weight: 0.25, direction: 'lower', enabled: false },
+  { id: 'WHIFF', label: 'Whiff%', weight: 0, direction: 'higher', enabled: false },
+  { id: 'XERA', label: 'xERA', weight: 0, direction: 'lower', enabled: false },
+  { id: 'XFIP', label: 'xFIP', weight: 0, direction: 'lower', enabled: false },
+  { id: 'FIP', label: 'FIP', weight: 0, direction: 'lower', enabled: false },
+  { id: 'WPA', label: 'WPA', weight: 0, direction: 'higher', enabled: false },
+  { id: 'LOBP', label: 'LOB%', weight: 0, direction: 'higher', enabled: false },
+  { id: 'BABIP', label: 'BABIP', weight: 0, direction: 'lower', enabled: false },
+  { id: 'HRFB', label: 'HR/FB', weight: 0, direction: 'lower', enabled: false },
   { id: 'W', label: 'W', weight: 0.25, direction: 'higher', enabled: false },
   { id: 'L', label: 'L', weight: 0.25, direction: 'lower', enabled: false },
   { id: 'IP', label: 'IP', weight: 0.25, direction: 'higher', enabled: false },
@@ -184,7 +184,9 @@ function reliefAppearances(gamesPitched: number | null, gamesStarted: number | n
 }
 
 export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
-  return splits.map((s) => {
+  const out: PlayerRow[] = []
+  for (const s of splits) {
+    if (!s?.player || typeof s.player.id !== 'number') continue
     const t = s.team
     const teamLabel =
       (t?.abbreviation && String(t.abbreviation).trim()) || t?.name || ''
@@ -227,10 +229,11 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
       K9: num(getStat(s, 'strikeoutsPer9Inn')),
       BB9: num(getStat(s, 'walksPer9Inn')),
     }
-    return {
+    out.push({
       playerId: s.player.id,
-      name: s.player.fullName,
+      name: typeof s.player.fullName === 'string' ? s.player.fullName : '',
       team: teamLabel,
+      teamCurrent: null,
       age,
       pitchHand: null,
       rrRole: null,
@@ -238,14 +241,24 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
       rrPosition1: null,
       stats,
       raw: s,
-    }
-  })
+    })
+  }
+  return out
 }
 
 function relieverFilter(rows: PlayerRow[], cfg: RpConfig) {
   const included: PlayerRow[] = []
   let excluded = 0
   for (const r of rows) {
+    const displayName = typeof r.name === 'string' ? r.name.trim() : ''
+    if (!displayName) {
+      excluded++
+      continue
+    }
+    if (displayName.includes('-')) {
+      excluded++
+      continue
+    }
     const gs = num((r.raw.stat as any)?.gamesStarted) ?? 0
     const g = num((r.raw.stat as any)?.gamesPitched) ?? num((r.raw.stat as any)?.gamesPlayed) ?? 0
     const ip = r.stats.IP ?? 0
@@ -277,13 +290,14 @@ function stdev(vals: number[], mu: number): number {
 }
 
 export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig[]) {
-  const enabled = cats.filter((c) => c.enabled && c.weight !== 0)
+  /** 체크된 카테고리 전부(가중치 0 포함): 표시·z-score용. 기여(contrib)·RP 합은 weight로 곱해져 0이 됨. */
+  const activeCats = cats.filter((c) => c.enabled)
   const { included, excluded } = relieverFilter(rows, cfg)
 
   const means: Partial<Record<CategoryId, number>> = {}
   const stdevs: Partial<Record<CategoryId, number>> = {}
 
-  for (const c of enabled) {
+  for (const c of activeCats) {
     const vals = included
       .map((r) => r.stats[c.id])
       .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
@@ -354,7 +368,7 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
     }
     let rp = 0
 
-    for (const c of enabled) {
+    for (const c of activeCats) {
       const v = r.stats[c.id]
       const mu = means[c.id]
       const sd = stdevs[c.id]

@@ -1,0 +1,160 @@
+.wrap {
+  padding: 0 20px 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.divisionBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.divTab,
+.divTabActive {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.divTab {
+  background: color-mix(in oklab, var(--bg) 94%, transparent);
+  color: color-mix(in oklab, var(--text) 88%, transparent);
+}
+
+.divTab:hover {
+  background: color-mix(in oklab, var(--accent-bg) 14%, transparent);
+  border-color: color-mix(in oklab, var(--border) 80%, var(--accent));
+}
+
+.divTabActive {
+  background: color-mix(in oklab, var(--accent-bg) 38%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+  color: var(--text-h);
+}
+
+.meta {
+  font-size: 12px;
+  color: color-mix(in oklab, var(--text) 72%, transparent);
+  margin-bottom: 20px;
+}
+
+.error {
+  border: 1px solid color-mix(in oklab, #b91c1c 45%, var(--border));
+  background: color-mix(in oklab, #b91c1c 12%, var(--bg));
+  color: var(--text-h);
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.error code {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.teamGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.teamCard {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  overflow: hidden;
+}
+
+.teamCard summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 14px;
+  font-weight: 650;
+  font-size: 14px;
+  color: var(--text-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  user-select: none;
+}
+
+.teamCard summary::-webkit-details-marker {
+  display: none;
+}
+
+.teamCard summary::after {
+  content: '▸';
+  font-size: 12px;
+  opacity: 0.65;
+  transition: transform 0.15s ease;
+}
+
+.teamCard[open] summary::after {
+  transform: rotate(90deg);
+}
+
+.teamCard summary:hover {
+  background: color-mix(in oklab, var(--accent-bg) 18%, transparent);
+}
+
+.count {
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in oklab, var(--text) 70%, transparent);
+}
+
+.tableWrap {
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  padding: 8px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table th {
+  font-weight: 600;
+  color: color-mix(in oklab, var(--text) 80%, transparent);
+  background: color-mix(in oklab, var(--bg) 96%, transparent);
+}
+
+.table td.num {
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--text) 75%, transparent);
+  font-size: 11px;
+}
+
+.nameCell {
+  font-weight: 550;
+  color: var(--text-h);
+}
+
+@media (max-width: 520px) {
+  .wrap {
+    padding: 0 12px 24px;
+  }
+
+  .table th,
+  .table td {
+    padding: 7px 8px;
+  }
+}

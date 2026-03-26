@@ -59,7 +59,10 @@ export type RpConfig = {
 export type PlayerRow = {
   playerId: number
   name: string
+  /** MLB 시즌 스플릿 팀(약어 등) — 랭킹·CSV에 사용 */
   team: string
+  /** FanGraphs Roster Resource 기준 현재 팀 표시용(없으면 null) */
+  teamCurrent: string | null
   age: number | null
   pitchHand: string | null
   /** FanGraphs Roster Resource depth chart slot (e.g. CL, SP3, MID). */

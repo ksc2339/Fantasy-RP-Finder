@@ -69,10 +69,21 @@
   white-space: nowrap;
 }
 
-.team {
+.teamBlock {
   margin-top: 4px;
+  min-width: 0;
+}
+
+.team {
   font-size: 12px;
   color: color-mix(in oklab, var(--text) 85%, transparent);
+}
+
+.teamSeasonNote {
+  margin-top: 2px;
+  font-size: 11px;
+  color: color-mix(in oklab, var(--text) 72%, transparent);
+  line-height: 1.35;
 }
 
 .rrLine {

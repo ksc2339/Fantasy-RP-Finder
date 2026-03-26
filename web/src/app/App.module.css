@@ -30,6 +30,46 @@
   color: var(--text-h);
 }
 
+.navRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.navLink,
+.navActive {
+  font-size: 13px;
+  font-weight: 550;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+
+.navLink {
+  color: color-mix(in oklab, var(--accent) 72%, var(--text-h));
+}
+
+.navLink:hover {
+  text-decoration: underline;
+}
+
+.navActive {
+  color: var(--text-h);
+  background: color-mix(in oklab, var(--accent-bg) 40%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--border));
+  margin: -5px -9px;
+  padding: 3px 7px;
+}
+
+.navSep {
+  color: color-mix(in oklab, var(--text) 55%, transparent);
+  font-size: 13px;
+  user-select: none;
+}
+
 .headerRight {
   display: flex;
   align-items: center;
