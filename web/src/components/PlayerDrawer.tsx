@@ -237,7 +237,7 @@ export function PlayerDrawer({ row, onClose, rpMeta, oopsyByPlayerId }: Props) {
                   <tr>
                     <th>Cat</th>
                     <th class={styles.num}>Value</th>
-                    <th class={styles.num}>Pctl (0–1)</th>
+                    <th class={styles.num}>z</th>
                     <th class={styles.num}>weight</th>
                     <th class={styles.num}>contrib</th>
                   </tr>

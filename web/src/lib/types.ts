@@ -137,7 +137,7 @@ export type PlayerRow = {
 
 export type PlayerRpRow = PlayerRow & {
   rp: number
-  /** 카테고리별 백분위 순위 0~1 (동점은 평균 순위; 높을수록 해당 카테고리에서 유리). */
+  /** 풀 대비 z-score (높을수록 해당 카테고리에서 유리). */
   z: Record<CategoryId, number | null>
   contrib: Record<CategoryId, number | null>
 }

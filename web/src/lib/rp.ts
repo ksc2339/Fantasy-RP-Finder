@@ -19,13 +19,13 @@ export const DEFAULT_RP_CONFIG: RpConfig = {
   season: Math.max(MIN_SUPPORTED_SEASON, new Date().getFullYear() - 1),
   useProjection: false,
   minIP: 10,
-  maxStarts: 1,
+  maxStarts: 10,
   minGames: 5,
 }
 
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
   { id: 'SV', label: 'SV', weight: 1, direction: 'higher', enabled: true },
-  { id: 'HLD', label: 'HLD', weight: 1, direction: 'higher', enabled: true },
+  { id: 'HLD', label: 'HLD', weight: 0.483, direction: 'higher', enabled: true },
   { id: 'SVH', label: 'SV+H', weight: 1, direction: 'higher', enabled: false },
   { id: 'NSVH', label: 'NSVH', weight: 1, direction: 'higher', enabled: false },
   { id: 'K', label: 'K', weight: 0.8, direction: 'higher', enabled: true },
@@ -75,7 +75,14 @@ export const FANTASY_LEAGUE_CATEGORY_ORDER: CategoryId[] = [
   'RAPP',
 ]
 
-type CategoryPresetId = 'adl' | 'angels' | 'dor' | 'dbv' | 'twenty' | 'infield' | 'jays'
+type CategoryPresetId =
+  | 'adl'
+  | 'angels'
+  | 'dor'
+  | 'dbv'
+  | 'twenty'
+  | 'infield'
+  | 'jays'
 
 export const CATEGORY_PRESETS: {
   id: CategoryPresetId
@@ -89,42 +96,95 @@ export const CATEGORY_PRESETS: {
     label: 'ADL',
     enabledIds: ['IP', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'SVH'],
     enabledWeight: 1,
+    enabledWeights: {
+      IP: 0.65,
+      BB: 0.35,
+      GIDP: 0.35,
+    },
   },
   {
     id: 'angels',
     label: '에인절스',
     enabledIds: ['IP', 'W', 'HR', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'SVH'],
     enabledWeight: 1,
+    enabledWeights: {
+      IP: 0.65,
+      W: 0.3,
+      HR: 0.35,
+      BB: 0.35,
+      GIDP: 0.35,
+    },
   },
   {
     id: 'dor',
     label: 'DOR',
     enabledIds: ['IP', 'W', 'HR', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'SVH'],
     enabledWeight: 1,
+    enabledWeights: {
+      IP: 0.65,
+      W: 0.3,
+      HR: 0.35,
+      BB: 0.35,
+      GIDP: 0.35,
+    },
   },
   {
     id: 'dbv',
     label: 'DBV',
     enabledIds: ['IP', 'W', 'H', 'ER', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'RAPP', 'SVH'],
     enabledWeight: 1,
+    enabledWeights: {
+      IP: 0.65,
+      W: 0.3,
+      H: 0.35,
+      ER: 0.35,
+      BB: 0.35,
+      GIDP: 0.35,
+      HR: 0.35,
+    },
   },
   {
     id: 'twenty',
     label: '20인 리그',
     enabledIds: ['IP', 'W', 'L', 'SV', 'HR', 'BB', 'K', 'GIDP', 'HLD', 'ERA', 'WHIP', 'RAPP'],
     enabledWeight: 1,
+    enabledWeights: {
+      HLD: 0.483,
+      IP: 0.65,
+      W: 0.3,
+      L: 0.3,
+      HR: 0.35,
+      BB: 0.35,
+      GIDP: 0.35,
+    },
   },
   {
     id: 'infield',
     label: 'Infield Report',
     enabledIds: ['IP', 'W', 'L', 'SV', 'HR', 'BB', 'K', 'GIDP', 'HLD', 'ERA', 'WHIP', 'RAPP'],
     enabledWeight: 1,
+    enabledWeights: {
+      HLD: 0.483,
+      IP: 0.65,
+      W: 0.3,
+      L: 0.3,
+      HR: 0.35,
+      BB: 0.35,
+      GIDP: 0.35,
+    },
   },
   {
     id: 'jays',
     label: 'Jays Go~',
     enabledIds: ['W', 'L', 'HR', 'BB', 'K', 'GIDP', 'ERA', 'WHIP', 'K9', 'NSVH'],
     enabledWeight: 1,
+    enabledWeights: {
+      W: 0.3,
+      L: 0.3,
+      HR: 0.35,
+      BB: 0.35,
+      GIDP: 0.35,
+    },
   },
 ]
 
@@ -169,6 +229,177 @@ function getStat(split: MlbPitchingSplit, key: string): unknown {
   return (split.stat as any)?.[key]
 }
 
+/** z/RP 계산 시 숫자로 못 받은 카운팅 스탯은 0으로 간주 (문자열·누락 대응). */
+const RANK_COUNTING_DEFAULT_ZERO: ReadonlySet<CategoryId> = new Set([
+  'K',
+  'SV',
+  'HLD',
+  'SVH',
+  'NSVH',
+  'W',
+  'L',
+  'IP',
+  'BB',
+  'HR',
+  'GIDP',
+  'H',
+  'ER',
+  'RAPP',
+  'QS',
+])
+
+/** `stats[c.id]`를 num()으로 파싱 — 문자열 "42" 등도 유한 숫자로 인정. */
+function rankingValueForZ(row: PlayerRow, c: CategoryConfig): number | null {
+  const v = num(row.stats[c.id] as unknown)
+  if (v != null && Number.isFinite(v)) return v
+  if (RANK_COUNTING_DEFAULT_ZERO.has(c.id)) return 0
+  return null
+}
+
+function sumN(a: number | null | undefined, b: number | null | undefined): number {
+  return (Number.isFinite(a ?? NaN) ? (a as number) : 0) + (Number.isFinite(b ?? NaN) ? (b as number) : 0)
+}
+
+function ipWeightedAvg(
+  va: number | null | undefined,
+  ipa: number | null | undefined,
+  vb: number | null | undefined,
+  ipb: number | null | undefined,
+): number | null {
+  const wa = Number.isFinite(ipa ?? NaN) && (ipa as number) > 0 ? (ipa as number) : 0
+  const wb = Number.isFinite(ipb ?? NaN) && (ipb as number) > 0 ? (ipb as number) : 0
+  const w = wa + wb
+  if (!(w > 0)) return va != null && Number.isFinite(va) ? va : vb != null && Number.isFinite(vb) ? vb : null
+  const a = Number.isFinite(va ?? NaN) ? (va as number) : 0
+  const b = Number.isFinite(vb ?? NaN) ? (vb as number) : 0
+  if (va == null && vb == null) return null
+  return (a * wa + b * wb) / w
+}
+
+function floatIpToMlbOutsString(ip: number): string {
+  const outs = Math.round(ip * 3)
+  const inn = Math.floor(outs / 3)
+  const r = outs % 3
+  return `${inn}.${r}`
+}
+
+function mergeTwoPlayerStats(a: PlayerRow['stats'], b: PlayerRow['stats']): PlayerRow['stats'] {
+  const K = sumN(a.K, b.K)
+  const SV = sumN(a.SV, b.SV)
+  const HLD = sumN(a.HLD, b.HLD)
+  const SVH = SV + HLD
+  const W = sumN(a.W, b.W)
+  const L = sumN(a.L, b.L)
+  const BB = sumN(a.BB, b.BB)
+  const HR = sumN(a.HR, b.HR)
+  const GIDP = sumN(a.GIDP, b.GIDP)
+  const H = sumN(a.H, b.H)
+  const ER = sumN(a.ER, b.ER)
+  const RAPP = sumN(a.RAPP, b.RAPP)
+  const QS = sumN(a.QS, b.QS)
+  const IP = sumN(a.IP, b.IP)
+  const ERA = IP > 0 ? (ER / IP) * 9 : null
+  const WHIP = IP > 0 ? (BB + H) / IP : null
+  const K9 = IP > 0 ? (K / IP) * 9 : null
+  const BB9 = IP > 0 ? (BB / IP) * 9 : null
+  return {
+    ...a,
+    K,
+    SV,
+    HLD,
+    SVH,
+    NSVH: null,
+    W,
+    L,
+    BB,
+    HR,
+    GIDP,
+    H,
+    ER,
+    RAPP,
+    QS,
+    IP,
+    ERA,
+    WHIP,
+    K9,
+    BB9,
+    WHIFF: ipWeightedAvg(a.WHIFF, a.IP, b.WHIFF, b.IP),
+    XERA: ipWeightedAvg(a.XERA, a.IP, b.XERA, b.IP),
+    XFIP: ipWeightedAvg(a.XFIP, a.IP, b.XFIP, b.IP),
+    FIP: ipWeightedAvg(a.FIP, a.IP, b.FIP, b.IP),
+    WPA: sumN(a.WPA, b.WPA),
+    LOBP: ipWeightedAvg(a.LOBP, a.IP, b.LOBP, b.IP),
+    BABIP: null,
+    HRFB: ipWeightedAvg(a.HRFB, a.IP, b.HRFB, b.IP),
+  }
+}
+
+function mergeRawSplitsForMergedRow(splits: MlbPitchingSplit[], mergedIp: number): MlbPitchingSplit {
+  const first = splits[0]!
+  let gs = 0
+  let gp = 0
+  for (const s of splits) {
+    gs += num(getStat(s, 'gamesStarted')) ?? 0
+    gp += num(getStat(s, 'gamesPitched')) ?? num(getStat(s, 'gamesPlayed')) ?? 0
+  }
+  return {
+    ...first,
+    stat: {
+      ...(first.stat as Record<string, unknown>),
+      gamesStarted: gs,
+      gamesPitched: gp,
+      gamesPlayed: gp,
+      inningsPitched: floatIpToMlbOutsString(mergedIp),
+    },
+  }
+}
+
+function mergePlayerRowGroup(rows: PlayerRow[]): PlayerRow {
+  if (rows.length === 1) return rows[0]!
+  let stats = rows[0]!.stats
+  for (let i = 1; i < rows.length; i++) {
+    stats = mergeTwoPlayerStats(stats, rows[i]!.stats)
+  }
+  const ip = stats.IP ?? 0
+  let bs = 0
+  for (const r of rows) {
+    bs += num(getStat(r.raw, 'blownSaves')) ?? 0
+  }
+  stats.SVH = (stats.SV ?? 0) + (stats.HLD ?? 0)
+  stats.NSVH = stats.SVH - bs
+  const raw = mergeRawSplitsForMergedRow(
+    rows.map((r) => r.raw),
+    ip,
+  )
+  const base = rows[0]!
+  return {
+    ...base,
+    stats,
+    raw,
+    oopsyGs: base.oopsyGs ?? rows.find((r) => r.oopsyGs != null)?.oopsyGs,
+    oopsyProjection: base.oopsyProjection ?? rows.find((r) => r.oopsyProjection != null)?.oopsyProjection,
+  }
+}
+
+/**
+ * 동일 시즌·동일 playerId 스플릿이 여러 줄(트레이드 등)이면 카운팅·IP를 합산해 한 줄로 만듭니다.
+ * 랭킹·z가 팀별 분할과 시즌 합계 불일치로 깨지는 것을 막습니다.
+ */
+export function aggregatePlayerRowsByPlayerId(rows: PlayerRow[]): PlayerRow[] {
+  const byId = new Map<number, PlayerRow[]>()
+  for (const r of rows) {
+    const arr = byId.get(r.playerId) ?? []
+    arr.push(r)
+    byId.set(r.playerId, arr)
+  }
+  const out: PlayerRow[] = []
+  for (const [, arr] of byId) {
+    if (arr.length === 1) out.push(arr[0]!)
+    else out.push(mergePlayerRowGroup(arr))
+  }
+  return out
+}
+
 /** (H − HR) / (BF − SO − BB − HBP − HR) from MLB season counting stats. */
 function pitcherBabip(split: MlbPitchingSplit): number | null {
   const h = num(getStat(split, 'hits'))
@@ -201,15 +432,18 @@ export function buildRows(splits: MlbPitchingSplit[]): PlayerRow[] {
     const sv = num(getStat(s, 'saves'))
     const hld = num(getStat(s, 'holds'))
     const bs = num(getStat(s, 'blownSaves'))
-    const svh = (sv ?? 0) + (hld ?? 0)
+    // API/스텁에 saves·holds 키가 없으면 null → 랭킹·z에서 제외되므로 0으로 통일
+    const svN = sv ?? 0
+    const hldN = hld ?? 0
+    const svh = svN + hldN
     const gamesStarted = num(getStat(s, 'gamesStarted'))
     const gamesPitched = num(getStat(s, 'gamesPitched')) ?? num(getStat(s, 'gamesPlayed')) ?? null
     const ip = inningsToFloat(getStat(s, 'inningsPitched'))
     const earnedRuns = num(getStat(s, 'earnedRuns'))
     const stats: PlayerRow['stats'] = {
       K: num(getStat(s, 'strikeOuts')),
-      SV: sv,
-      HLD: hld,
+      SV: svN,
+      HLD: hldN,
       SVH: Number.isFinite(svh) ? svh : null,
       NSVH: Number.isFinite(svh) ? svh - (bs ?? 0) : null,
       W: num(getStat(s, 'wins')),
@@ -346,61 +580,44 @@ function stdev(vals: number[], mu: number): number {
   return Math.sqrt(v)
 }
 
-/** 동률은 평균 순위. 값 오름차순 정렬 후 rank 0..n-1 → 0~1 백분위. */
-function percentileByPlayer(
-  included: PlayerRow[],
-  catId: CategoryId,
-  direction: 'higher' | 'lower',
-): Map<number, number> {
-  const pairs = included
-    .map((r) => ({ pid: r.playerId, v: r.stats[catId] }))
-    .filter((x): x is { pid: number; v: number } => typeof x.v === 'number' && Number.isFinite(x.v))
-  const n = pairs.length
-  if (n === 0) return new Map()
-  if (n === 1) return new Map([[pairs[0].pid, 0.5]])
-
-  pairs.sort((a, b) => a.v - b.v)
-  const ranks = new Array<number>(n).fill(0)
-  let j = 0
-  while (j < n) {
-    let k = j
-    while (k < n && pairs[k].v === pairs[j].v) k++
-    const avgRank = (j + k - 1) / 2
-    for (let t = j; t < k; t++) ranks[t] = avgRank
-    j = k
-  }
-
-  const out = new Map<number, number>()
-  const denom = n - 1
-  for (let i = 0; i < n; i++) {
-    const rank = ranks[i]
-    const pct = direction === 'higher' ? rank / denom : 1 - rank / denom
-    out.set(pairs[i].pid, pct)
-  }
-  return out
-}
-
 export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig[]) {
-  /** 체크된 카테고리 전부(가중치 0 포함): 백분위(0~1)·기여(contrib)·RP 합. */
+  /** 체크된 카테고리 전부(가중치 0 포함): z-score·기여(contrib)·RP 합. */
   const activeCats = cats.filter((c) => c.enabled)
   const { included, excluded } = relieverFilter(rows, cfg)
 
   const means: Partial<Record<CategoryId, number>> = {}
   const stdevs: Partial<Record<CategoryId, number>> = {}
-  const percentileByCat = new Map<CategoryId, Map<number, number>>()
 
   for (const c of activeCats) {
     const vals = included
-      .map((r) => r.stats[c.id])
-      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+      .map((r) => rankingValueForZ(r, c))
+      .filter((v): v is number => v != null && Number.isFinite(v))
     const mu = mean(vals)
     const sd = stdev(vals, mu)
     means[c.id] = mu
     stdevs[c.id] = sd
-    percentileByCat.set(c.id, percentileByPlayer(included, c.id, c.direction))
   }
 
-  const rpRows: PlayerRpRow[] = included.map((r) => {
+  const zByCat: Partial<Record<CategoryId, (number | null)[]>> = {}
+  for (const c of activeCats) {
+    const mu = means[c.id]
+    const sd = stdevs[c.id]
+    const col: (number | null)[] = Array(included.length).fill(null)
+    if (mu == null || sd == null || sd === 0) {
+      zByCat[c.id] = col
+      continue
+    }
+    included.forEach((row, idx) => {
+      const v = rankingValueForZ(row, c)
+      if (v == null || !Number.isFinite(v)) return
+      const adj = c.direction === 'lower' ? -v : v
+      const adjMu = c.direction === 'lower' ? -mu : mu
+      col[idx] = (adj - adjMu) / sd
+    })
+    zByCat[c.id] = col
+  }
+
+  const rpRows: PlayerRpRow[] = included.map((r, rowIdx) => {
     const z: PlayerRpRow['z'] = {
       K: null,
       SV: null,
@@ -462,12 +679,11 @@ export function computeRp(rows: PlayerRow[], cfg: RpConfig, cats: CategoryConfig
     let rp = 0
 
     for (const c of activeCats) {
-      const pmap = percentileByCat.get(c.id)
-      const pct = pmap?.get(r.playerId)
-      if (pct == null) continue
+      const zi = zByCat[c.id]?.[rowIdx]
+      if (zi == null) continue
 
-      z[c.id] = pct
-      const ci = pct * c.weight
+      z[c.id] = zi
+      const ci = zi * c.weight
       contrib[c.id] = ci
       rp += ci
     }

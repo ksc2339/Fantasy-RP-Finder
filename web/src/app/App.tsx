@@ -18,6 +18,7 @@ import {
   DEFAULT_RP_CONFIG,
   MIN_SUPPORTED_SEASON,
   PROJECTION_SEASON,
+  aggregatePlayerRowsByPlayerId,
   buildOopsySupplementPlayerRows,
   buildRows,
   computeRp,
@@ -220,7 +221,7 @@ export function App() {
     const mergeOopsy =
       cfg.season === PROJECTION_SEASON && cfg.useProjection && oopsyByPlayerId != null
 
-    return combined.map((r) => {
+    const enriched = combined.map((r) => {
       let r2 = mergeRpRowWithDepthSnapshot(r, byId, depth)
 
       const m = savantByPlayerId ? savantByPlayerId[String(r.playerId)] : undefined
@@ -258,6 +259,7 @@ export function App() {
         oopsyProjection,
       }
     })
+    return aggregatePlayerRowsByPlayerId(enriched)
   }, [
     raw,
     supplementRows,

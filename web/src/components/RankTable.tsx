@@ -222,7 +222,7 @@ export function RankTable({ rows, meta, status, onPick }: Props) {
       </div>
 
       <div class={styles.hint}>
-        Tip: click a row to see percentile (0–1) and contributions per category.
+        Tip: click a row to see z-score contributions per category.
       </div>
     </div>
   )

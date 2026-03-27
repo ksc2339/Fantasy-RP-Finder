@@ -97,6 +97,12 @@ export function mergeOopsyIntoStats(
     if (rap >= 0 && Number.isFinite(rap)) next.RAPP = rap
   }
 
+  if (next.SV == null) next.SV = 0
+  if (next.HLD == null) next.HLD = 0
+  next.SVH = next.SV + next.HLD
+  const bsOut = pickN(o, 'BS')
+  next.NSVH = next.SVH - (bsOut ?? 0)
+
   return next
 }
 
