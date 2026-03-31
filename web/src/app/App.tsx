@@ -27,6 +27,7 @@ import { SettingsPanel } from '../components/SettingsPanel'
 import { RankTable } from '../components/RankTable'
 import { PlayerDrawer } from '../components/PlayerDrawer'
 import { DepthChartsPage } from '../components/DepthChartsPage'
+import { TargetPlanner } from '../components/TargetPlanner'
 import { exportRowsToCsv } from '../lib/export'
 import { clearDataCaches } from '../lib/savantPitcherData'
 import styles from './App.module.css'
@@ -64,6 +65,16 @@ function AppNav({ route }: { route: string }) {
         aria-current={route.startsWith('/depth') ? 'page' : undefined}
       >
         팀별 뎁스 차트
+      </a>
+      <span class={styles.navSep} aria-hidden>
+        ·
+      </span>
+      <a
+        href="#/target"
+        class={route.startsWith('/target') ? styles.navActive : styles.navLink}
+        aria-current={route.startsWith('/target') ? 'page' : undefined}
+      >
+        목표치 체크
       </a>
     </nav>
   )
@@ -322,6 +333,34 @@ export function App() {
           </div>
         </header>
         <DepthChartsPage refreshKey={dataRefreshKey} />
+      </div>
+    )
+  }
+
+  if (route.startsWith('/target')) {
+    return (
+      <div class={styles.page}>
+        <header class={styles.header}>
+          <div>
+            <div class={styles.title}>판타지 베이스볼 불펜 구하기</div>
+            <AppNav route={route} />
+          </div>
+          <div class={styles.headerRight}>
+            <button
+              class={styles.ghostButton}
+              type="button"
+              onClick={handleForceDataRefresh}
+              disabled={state.status === 'loading'}
+              aria-label="캐시를 비우고 스탯·보직·팀별 뎁스 차트 JSON을 다시 불러오기"
+            >
+              Fetch
+            </button>
+          </div>
+        </header>
+
+        <main class={styles.mainSingle}>
+          <TargetPlanner rows={rows} relieverRows={rp.rows} status={state.status} cfg={cfg} setCfg={setCfg} />
+        </main>
       </div>
     )
   }

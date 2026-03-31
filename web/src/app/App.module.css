@@ -98,6 +98,10 @@
   padding: 16px 20px 20px;
 }
 
+.mainSingle {
+  padding: 16px 20px 20px;
+}
+
 .panel {
   position: sticky;
   top: 12px;

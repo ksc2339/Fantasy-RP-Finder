@@ -1,0 +1,132 @@
+.wrap {
+  display: grid;
+  gap: 14px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  padding: 14px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--text-h);
+}
+
+.sub {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.row {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.select,
+.num {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
+  color: var(--text-h);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.secTitle {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-h);
+  margin-bottom: 8px;
+}
+
+.slotRow {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.slotTitle {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.slotBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.slotStat {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.statRows {
+  display: grid;
+  gap: 12px;
+}
+
+.statRow {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.k {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.v {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 650;
+  color: var(--text-h);
+}
+
+.note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .slotBody {
+    grid-template-columns: 1fr;
+  }
+}
